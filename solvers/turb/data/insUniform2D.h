@@ -50,8 +50,8 @@ SOFTWARE.
       *(vB) = p_vbar;							\
     } else if(bc==3){							\
       /* penalize tangential part */					\
-      *(uB) = (ndotU>0) ? uM : 0;					\
-      *(vB) = (ndotU>0) ? vM : 0;					\
+      *(uB) = (ndotUe>0) ? uM : 0;					\
+      *(vB) = (ndotUe>0) ? vM : 0;					\
     } else if(bc==4){							\
       *(uB) = 0.f;							\
       *(vB) = vM;							\

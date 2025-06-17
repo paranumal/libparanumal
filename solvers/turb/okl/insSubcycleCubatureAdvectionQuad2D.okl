@@ -27,7 +27,6 @@ SOFTWARE.
 
 #define p_half ((dfloat)0.5)
 
-
 // compute NU_x = (phi, u_e*du/dx + v_e*du/dy + 0.5*u*(du_e/dx + dv_e/dy) )
 // compute NU_y = (phi, u_e*dv/dx + v_e*dv/dy + 0.5*v*(du_e/dx + dv_e/dy) )
 @kernel void insSubcycleAdvectionCubatureVolumeQuad2D(const dlong Nelements,
@@ -43,12 +42,11 @@ SOFTWARE.
   
   for(dlong eo=0;eo<Nelements;eo+=p_cubNblockV;@outer(0)){  // for all elements
 
-    @shared dfloat s_U[p_cubNblockV][p_cubNq][p_cubNq];
-    @shared dfloat s_V[p_cubNblockV][p_cubNq][p_cubNq];
+    @shared dfloat    s_U[p_cubNblockV][p_NVfields][p_cubNq][p_cubNq];
+    @shared dfloat s_rhsU[p_cubNblockV][p_NVfields][p_cubNq][p_cubNq];
+
     @shared dfloat s_Ue[p_cubNblockV][p_cubNq][p_cubNq];
     @shared dfloat s_Ve[p_cubNblockV][p_cubNq][p_cubNq];
-    @shared dfloat s_rhsU[p_cubNblockV][p_cubNq][p_cubNq];
-    @shared dfloat s_rhsV[p_cubNblockV][p_cubNq][p_cubNq];
     @shared dfloat s_rxdivU[p_cubNblockV][p_cubNq][p_cubNq];
     @shared dfloat s_rydivV[p_cubNblockV][p_cubNq][p_cubNq];
     @shared dfloat s_sxdivU[p_cubNblockV][p_cubNq][p_cubNq];
@@ -59,7 +57,7 @@ SOFTWARE.
     @shared dfloat s_cubPDT[p_cubNq][p_Nq];
     @shared dfloat s_cubD[p_cubNq][p_cubNq];
     
-    @exclusive dfloat r_Un, r_Vn, r_Uen, r_Ven;
+    @exclusive dfloat r_Un[p_NVfields], r_Uen, r_Ven;
     @exclusive dfloat r_divUr, r_divUs, r_divVr, r_divVs;
     
     //fetch the Ue and V values and store in flux arrays in @shared
@@ -70,10 +68,13 @@ SOFTWARE.
           if(e<Nelements && i<p_Nq && j<p_Nq){
             const dlong id = e*p_Np*p_NVfields + j*p_Nq+i;
 
-            s_U[es][j][i]  = U[id+0*p_Np];
-            s_V[es][j][i]  = U[id+1*p_Np];
-            s_Ue[es][j][i] = Ue[id+0*p_Np];
-            s_Ve[es][j][i] = Ue[id+1*p_Np];
+#pragma unroll p_NVfields
+	    for(int fld=0;fld<p_NVfields;++fld)
+	      s_U[es][fld][j][i]  = U[id+fld*p_Np];
+	    
+	    const dlong eid = e*p_Np*p_dim + j*p_Nq+i;
+            s_Ue[es][j][i] = Ue[eid+0*p_Np];
+            s_Ve[es][j][i] = Ue[eid+1*p_Np];
           }
 
 	  s_cubD[j][i] = cubDT[j*p_cubNq+i];
@@ -89,20 +90,24 @@ SOFTWARE.
       }
     }
 
-
     //interpolate in i, store in register
     for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
             r_Uen  = 0.; r_Ven  = 0.;
-            r_Un = 0.; r_Vn = 0.;
 
-            #pragma unroll p_Nq
+	    for(int fld=0;fld<p_NVfields;++fld)
+	      r_Un[fld] = 0.; 
+
+#pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Ini = s_cubInterp[n][i];
-              r_Un  += Ini*s_U[es][j][n];
-              r_Vn  += Ini*s_V[es][j][n];
+
+#pragma unroll p_NVfields	      
+	      for(int fld=0;fld<p_NVfields;++fld)
+		r_Un[fld]  += Ini*s_U[es][fld][j][n];
+	      
               r_Uen += Ini*s_Ue[es][j][n];
               r_Ven += Ini*s_Ve[es][j][n];
             }
@@ -110,15 +115,17 @@ SOFTWARE.
         }
       }
     }
-
     
     //write register back to @shared
     for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
-            s_U[es][j][i] = r_Un;
-            s_V[es][j][i] = r_Vn;
+
+#pragma unroll p_NVfields
+	    for(int fld=0;fld<p_NVfields;++fld)
+	      s_U[es][fld][j][i] = r_Un[fld];
+
             s_Ue[es][j][i] = r_Uen;
             s_Ve[es][j][i] = r_Ven;
           }
@@ -130,14 +137,20 @@ SOFTWARE.
     for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
-          r_Un  = 0.; r_Vn  = 0.;
+
+	  for(int fld=0;fld<p_NVfields;++fld)
+	    r_Un[fld] = 0;
+
           r_Uen = 0.; r_Ven = 0.;
 
-          #pragma unroll p_Nq
+#pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             const dfloat Inj = s_cubInterp[n][j];
-            r_Un  += Inj*s_U[es][n][i];
-            r_Vn  += Inj*s_V[es][n][i];
+
+#pragma unroll p_NVfields	    
+	    for(int fld=0;fld<p_NVfields;++fld)
+	      r_Un[fld]  += Inj*s_U[es][fld][n][i];
+
             r_Uen += Inj*s_Ue[es][n][i];
             r_Ven += Inj*s_Ve[es][n][i];
           }
@@ -149,8 +162,11 @@ SOFTWARE.
     for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
-	  s_U[es][j][i] = r_Un;
-	  s_V[es][j][i] = r_Vn;
+
+#pragma unroll p_NVfields
+	  for(int fld=0;fld<p_NVfields;++fld)
+	    s_U[es][fld][j][i] = r_Un[fld];
+
 	  s_Ue[es][j][i] = r_Uen;
 	  s_Ve[es][j][i] = r_Ven;
         }
@@ -169,38 +185,49 @@ SOFTWARE.
             const dfloat dsdy = cubvgeo[gid + p_SYID*p_cubNp];
             const dfloat JW   = cubvgeo[gid + p_JWID*p_cubNp];
 
-	    dfloat cUr = 0, cUs = 0, cVr = 0, cVs = 0;
+	    dfloat cUr[p_NVfields] = {0.};
+	    dfloat cUs[p_NVfields] = {0.};
 	    dfloat cUer = 0, cUes = 0, cVer = 0, cVes = 0;
-	    
+
+#pragma unroll p_cubNq
 	    for(int n=0;n<p_cubNq;++n){
 	      dfloat Din = s_cubD[i][n];
 
-	      cUr += Din*s_U[es][j][n];
-	      cVr += Din*s_V[es][j][n];
+#pragma unroll p_NVfields	      
+	      for(int fld=0;fld<p_NVfields;++fld)
+		cUr[fld] += Din*s_U[es][fld][j][n];
+
 	      cUer += Din*s_Ue[es][j][n];
 	      cVer += Din*s_Ve[es][j][n];
 	    }
 
+#pragma unroll p_cubNq
 	    for(int n=0;n<p_cubNq;++n){
 	      dfloat Djn = s_cubD[j][n];
-	      
-	      cUs += Djn*s_U[es][n][i];
-	      cVs += Djn*s_V[es][n][i];
+
+#pragma unroll p_NVfields	      
+	      for(int fld=0;fld<p_NVfields;++fld)
+		cUs[fld] += Djn*s_U[es][fld][n][i];
+
 	      cUes += Djn*s_Ue[es][n][i];
 	      cVes += Djn*s_Ve[es][n][i];
 	    }
 
-	    dfloat cUx = drdx*cUr + dsdx*cUs;
-	    dfloat cUy = drdy*cUr + dsdy*cUs;
-	    dfloat cVx = drdx*cVr + dsdx*cVs;
-	    dfloat cVy = drdy*cVr + dsdy*cVs;
 	    dfloat cUex = drdx*cUer + dsdx*cUes;
 	    dfloat cVey = drdy*cVer + dsdy*cVes;
-	    dfloat cdivU = cUx + cVy;
 	    dfloat cdivUe = cUex + cVey;
 
-	    s_rhsU[es][j][i] = JW*(r_Uen*cUx + r_Ven*cUy + p_half*r_Un*cdivUe);
-	    s_rhsV[es][j][i] = JW*(r_Uen*cVx + r_Ven*cVy + p_half*r_Vn*cdivUe);
+	    dfloat cdivU = 0;
+
+#pragma unroll p_NVfields	    
+	    for(int fld=0;fld<p_NVfields;++fld){
+	      dfloat cUx = drdx*cUr[fld] + dsdx*cUs[fld];
+	      dfloat cUy = drdy*cUr[fld] + dsdy*cUs[fld];
+	      if(fld==0) cdivU += cUx;
+	      if(fld==1) cdivU += cUy;
+
+	      s_rhsU[es][fld][j][i] = JW*(r_Uen*cUx + r_Ven*cUy + p_half*r_Un[fld]*cdivUe);
+	    }
 
 	    s_rxdivU[es][j][i] = drdx*JW*cdivU; // sign
 	    s_rydivV[es][j][i] = drdy*JW*cdivU; // sign
@@ -216,14 +243,22 @@ SOFTWARE.
     for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
-          r_Un = 0; r_Vn = 0; r_divUr = 0; r_divUs = 0; r_divVr = 0; r_divVs = 0;
+
+#pragma unroll p_NVfields	  
+	  for(int fld=0;fld<p_NVfields;++fld)
+	    r_Un[fld] = 0;
+
+	  r_divUr = 0; r_divUs = 0; r_divVr = 0; r_divVs = 0;
           if (j<p_Nq) {
 #pragma unroll p_cubNq
             for (int n=0;n<p_cubNq;n++) {
               const dfloat Pnj = s_cubProject[n][j];
 	      const dfloat Dnj = s_cubPDT[n][j];
-              r_Un  += Pnj*s_rhsU[es][n][i];
-              r_Vn  += Pnj*s_rhsV[es][n][i];
+
+#pragma unroll p_NVfields	      
+	      for(int fld=0;fld<p_NVfields;++fld)
+		r_Un[fld]  += Pnj*s_rhsU[es][fld][n][i];
+	      
 	      r_divUr += Pnj*s_rxdivU[es][n][i];
 	      r_divVr += Pnj*s_rydivV[es][n][i];
 	      r_divUs += Dnj*s_sxdivU[es][n][i];
@@ -240,8 +275,11 @@ SOFTWARE.
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
-            s_rhsU[es][j][i] = r_Un;
-            s_rhsV[es][j][i] = r_Vn;
+
+#pragma unroll p_NVfields	    
+	    for(int fld=0;fld<p_NVfields;++fld)
+	      s_rhsU[es][fld][j][i] = r_Un[fld];
+
 	    s_rxdivU[es][j][i] = r_divUr;
 	    s_rydivV[es][j][i] = r_divVr;
 	    s_sxdivU[es][j][i] = r_divUs;
@@ -261,14 +299,17 @@ SOFTWARE.
             const dlong gid = e*p_Np*p_Nvgeo+ j*p_Nq +i;
             const dfloat invJW = vgeo[gid + p_IJWID*p_Np];
             const dfloat volh   = vgeo[gid + p_VOLHID*p_Np];
-            dfloat nu = 0.f, nv = 0.f, divUx = 0, divVy = 0;
+            dfloat nu[p_NVfields] = {0.f}, divUx = 0, divVy = 0;
 
 #pragma unroll p_cubNq
 	    for(int n=0;n<p_cubNq;++n){
 	      const dfloat Pni = s_cubProject[n][i];
 	      const dfloat Dni = s_cubPDT[n][i];
-	      nu  += Pni*s_rhsU[es][j][n];
-	      nv  += Pni*s_rhsV[es][j][n];
+
+#pragma unroll p_NVfields	      
+	      for(int fld=0;fld<p_NVfields;++fld)
+		nu[fld]  += Pni*s_rhsU[es][fld][j][n];
+
 	      divUx += Dni*s_rxdivU[es][j][n];
 	      divVy += Dni*s_rydivV[es][j][n];
 	      divUx += Pni*s_sxdivU[es][j][n];
@@ -277,15 +318,20 @@ SOFTWARE.
 //	    dfloat tauVol = 2.5e-3; // fix later  -2.e-3; // fix later
 	    dfloat tauVol = 0.25*volh;
             const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
-            RHS[id+0*p_Np] = -invJW*(nu+tauVol*divUx);// note sign change
-            RHS[id+1*p_Np] = -invJW*(nv+tauVol*divVy);
+
+#pragma unroll p_NVfields	    
+	    for(int fld=0;fld<p_NVfields;++fld){
+	      dfloat tmp = nu[fld];
+	      if(fld==0) tmp += tauVol*divUx;
+	      if(fld==1) tmp += tauVol*divVy;
+	      RHS[id+fld*p_Np] = -invJW*tmp;
+	    }
           }
         }
       }
     }
   }
 }
-
 
 
 
@@ -328,10 +374,8 @@ SOFTWARE.
     @shared dfloat s_NU[p_cubNblockS][p_Nq][p_Nq];
     @shared dfloat s_NV[p_cubNblockS][p_Nq][p_Nq];
 
-    @shared dfloat s_UM[p_cubNblockS][p_Nfaces][p_cubNq];
-    @shared dfloat s_VM[p_cubNblockS][p_Nfaces][p_cubNq];
-    @shared dfloat s_UP[p_cubNblockS][p_Nfaces][p_cubNq];
-    @shared dfloat s_VP[p_cubNblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_UeM[p_cubNblockS][p_Nfaces][p_cubNq];
+    @shared dfloat s_VeM[p_cubNblockS][p_Nfaces][p_cubNq];
 
     @shared dfloat s_UdM[p_cubNblockS][p_Nfaces][p_cubNq];
     @shared dfloat s_VdM[p_cubNblockS][p_Nfaces][p_cubNq];
@@ -339,11 +383,10 @@ SOFTWARE.
     @shared dfloat s_VdP[p_cubNblockS][p_Nfaces][p_cubNq];
 
     //reuse @shared memory buffers
-    #define s_fluxNU s_UM
-    #define s_fluxNV s_VM
+    #define s_fluxNU s_UeM
+    #define s_fluxNV s_VeM
 
-    @exclusive dfloat r_UMn[p_Nfaces], r_VMn[p_Nfaces];
-    @exclusive dfloat r_UPn[p_Nfaces], r_VPn[p_Nfaces];
+    @exclusive dfloat r_UeMn[p_Nfaces], r_VeMn[p_Nfaces];
     @exclusive dfloat r_UdMn[p_Nfaces], r_VdMn[p_Nfaces];
     @exclusive dfloat r_UdPn[p_Nfaces], r_VdPn[p_Nfaces];
 
@@ -371,10 +414,8 @@ SOFTWARE.
             const dlong qbaseP = eP*p_Np*p_NVfields + vidP;
 
             // load negative and positive trace node values of velocity
-            s_UM[es][face][i] = Ue[qbaseM+0*p_Np];
-            s_VM[es][face][i] = Ue[qbaseM+1*p_Np];
-            s_UP[es][face][i] = Ue[qbaseP+0*p_Np];
-            s_VP[es][face][i] = Ue[qbaseP+1*p_Np];
+            s_UeM[es][face][i] = Ue[qbaseM+0*p_Np];
+            s_VeM[es][face][i] = Ue[qbaseM+1*p_Np];
 
 	    //	    if( fabs(s_UM[es][face][i]-s_UP[es][face][i] )>1e-10*fabs(s_UM[es][face][i]))
 	    //	      printf("dUe=%e, dVe=%e\n", s_UM[es][face][i]-s_UP[es][face][i], s_VM[es][face][i]-s_VP[es][face][i]);
@@ -418,8 +459,7 @@ SOFTWARE.
       for(int i=0;i<p_cubNq;++i;@inner(0)){
         #pragma unroll p_Nfaces
         for (int face=0;face<p_Nfaces;face++) {
-          r_UMn[face] = 0., r_VMn[face] = 0.;
-          r_UPn[face] = 0., r_VPn[face] = 0.;
+          r_UeMn[face] = 0., r_VeMn[face] = 0.;
           r_UdMn[face] = 0., r_VdMn[face] = 0.;
           r_UdPn[face] = 0., r_VdPn[face] = 0.;
         }
@@ -430,10 +470,8 @@ SOFTWARE.
 
           #pragma unroll p_Nfaces
           for (int face=0;face<p_Nfaces;face++) {
-            r_UMn[face]  += Ini*s_UM[es][face][n];
-            r_VMn[face]  += Ini*s_VM[es][face][n];
-            r_UPn[face]  += Ini*s_UP[es][face][n];
-            r_VPn[face]  += Ini*s_VP[es][face][n];
+            r_UeMn[face]  += Ini*s_UeM[es][face][n];
+            r_VeMn[face]  += Ini*s_VeM[es][face][n];
             r_UdMn[face]  += Ini*s_UdM[es][face][n];
             r_VdMn[face]  += Ini*s_VdM[es][face][n];
             r_UdPn[face]  += Ini*s_UdP[es][face][n];
@@ -457,42 +495,25 @@ SOFTWARE.
             const dfloat WsJ = cubsgeo[sk*p_Nsgeo+p_WSJID];
 	    const dfloat surfH = cubsgeo[sk*p_Nsgeo+p_MAXHID];
 	    
-            const dfloat uM = r_UMn[face], vM = r_VMn[face];
-            const dfloat uP = r_UPn[face], vP = r_VPn[face];
+            const dfloat ueM = r_UeMn[face], veM = r_VeMn[face];
             const dfloat udM = r_UdMn[face], vdM = r_VdMn[face];
                   dfloat udP = r_UdPn[face], vdP = r_VdPn[face];
 
             int bc = EToB[face+p_Nfaces*e];
             if(bc>0) {
-	      dfloat ndotU = nx*uM + ny*vM;
+	      dfloat ndotUe = nx*ueM + ny*veM;
               const dlong idm = e*p_Nfaces*p_cubNq + face*p_cubNq + i;
-              insVelocityDirichletConditions2D(bc, ndotU, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-                                                         inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
-                                                         nx, ny, udM, vdM, &udP, &vdP);
+              insVelocityDirichletConditions2D(bc, ndotUe, nu, time, intx[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
+					       inty[e*p_Nfaces*p_cubNq + face*p_cubNq + i], \
+					       nx, ny, udM, vdM, &udP, &vdP);
             }
 
-            dfloat unM   = fabs(nx*uM + ny*vM);
-            dfloat unP   = fabs(nx*uP + ny*vP);
-	    dfloat unMax = (unM > unP) ? unM : unP;
-	    //	    dfloat unMax = 0.5f*(unM+unP);
-
-#if 0
-	    unMax = (unMax<1) ? 1:unMax;
-
-            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP + uM*udM) + ny*(vP*udP + vM*udM)  + unMax*(udM-udP)));
-            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP + uM*vdM) + ny*(vP*vdP + vM*vdM)  + unMax*(vdM-vdP)));
-
-#else
-
+            dfloat uenM   = fabs(nx*ueM + ny*veM);
 	    dfloat tauSur = surfH; // fix this later ?
 	    dfloat ndotdUd = nx*(udM-udP) + ny*(vdM-vdP);
 
-            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*(uP*udP - uM*udM) + ny*(vP*udP - vM*udM)  + unMax*(udM-udP) + tauSur*nx*ndotdUd));
-            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*(uP*vdP - uM*vdM) + ny*(vP*vdP - vM*vdM)  + unMax*(vdM-vdP) + tauSur*ny*ndotdUd));
-	    
-	    
-#endif
-
+            s_fluxNU[es][face][i] = WsJ*(.5f*(nx*ueM*(udP - udM) + ny*veM*(udP - udM)  + uenM*(udM-udP) + tauSur*nx*ndotdUd));
+            s_fluxNV[es][face][i] = WsJ*(.5f*(nx*ueM*(vdP - vdM) + ny*veM*(vdP - vdM)  + uenM*(vdM-vdP) + tauSur*ny*ndotdUd));
           }
         }
       }

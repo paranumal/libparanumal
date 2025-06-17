@@ -696,7 +696,7 @@ void stress_t::Run(){
 #endif
 
 void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
-                       settings_t& _settings, dfloat _lambda,
+		     settings_t& _settings, dfloat viscosity, dfloat _lambda,
                        const int _NBCTypes, const memory<int> _BCType){
 
   platform = _platform;
@@ -783,7 +783,7 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
       dlong id = e*mesh.Np + n;
       dfloat xn = mesh.x[id];
       dfloat yn = mesh.y[id];
-      nut[id] = (1 + 0.3*cos(M_PI*xn)*cos(M_PI*yn))*1000;
+      nut[id] = 1 + 0.5*(1+tanh(40.*(xn-1.2)))*(0.01/viscosity);  // 1 + excess scaled by 1/viscosity
     }
   }
   o_nut  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements, nut);

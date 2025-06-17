@@ -212,13 +212,12 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
         wLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(wNlocal, platform, vSettings, comm);
 
     }
-
-
-
     
     // Setup vector velocity stress solver
     std::cout << "Setting up stress solver: " << std::endl;
-    stressSolver.Setup(platform, mesh, vSettings, lambda, NBCTypes, uBCType);
+    dfloat viscosity;
+    settings.getSetting("VISCOSITY", viscosity);
+    stressSolver.Setup(platform, mesh, vSettings, viscosity, lambda, NBCTypes, uBCType);
     stressLinearSolver.Setup<LinearSolver::pcg<dfloat>>(stressSolver.Ndofs, stressSolver.Nhalo, platform, vSettings, comm);
     stressLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(stressSolver.Ndofs, platform, vSettings, comm);
     

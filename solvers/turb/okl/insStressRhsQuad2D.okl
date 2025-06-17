@@ -198,9 +198,9 @@
         r_Av[j] += tmpv;
 
         const dlong id = e*p_Np + j*p_Nq + i;
-        const dlong iid = p_NVfields*e*p_Np + j*p_Nq + i;
-        rhsU[p_NVfields*id+0] = JW*RHS[iid+0*p_Np]/nu - (r_Au[j] + s_ndu[j][i]);
-        rhsU[p_NVfields*id+1] = JW*RHS[iid+1*p_Np]/nu - (r_Av[j] + s_ndv[j][i]);
+        const dlong iid = p_dim*e*p_Np + j*p_Nq + i;
+        rhsU[p_dim*id+0] = JW*RHS[iid+0*p_Np]/nu - (r_Au[j] + s_ndu[j][i]);
+        rhsU[p_dim*id+1] = JW*RHS[iid+1*p_Np]/nu - (r_Av[j] + s_ndv[j][i]);
 
       }
     }
@@ -216,15 +216,15 @@
       const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];			\
       const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];			\
                                                                         \
-      const dfloat uM = UH[p_NVfields*idM+0];					\
-      const dfloat vM = UH[p_NVfields*idM+1];					\
+      const dfloat uM = UH[p_dim*idM+0];					\
+      const dfloat vM = UH[p_dim*idM+1];					\
                                                                         \
       dfloat uP=0;							\
       dfloat vP=0;							\
       dfloat ndotU = 1;							\
       insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); \
-      UH[p_NVfields*idM+0] = uP;							\
-      UH[p_NVfields*idM+1] = vP;							\
+      UH[p_dim*idM+0] = uP;							\
+      UH[p_dim*idM+1] = vP;							\
     }									\
   }
 
@@ -269,9 +269,9 @@
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong id = e*p_Np+j*p_Nq+i;
-        const dlong iid = e*p_Np*p_NVfields+j*p_Nq+i;
-        U[iid+0*p_Np] = UH[p_NVfields*id+0];
-        U[iid+1*p_Np] = UH[p_NVfields*id+1];
+        const dlong iid = e*p_Np*p_dim+j*p_Nq+i;
+        U[iid+0*p_Np] = UH[p_dim*id+0];
+        U[iid+1*p_Np] = UH[p_dim*id+1];
       }
     }
   }

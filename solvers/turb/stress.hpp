@@ -107,14 +107,14 @@ public:
   
   stress_t() = default;
   stress_t(platform_t &_platform, mesh_t &_mesh,
-              settings_t& _settings, dfloat _lambda,
-              const int _NBCTypes, const memory<int> _BCType) {
-    Setup(_platform, _mesh, _settings, _lambda, _NBCTypes, _BCType);
+	   settings_t& _settings, dfloat _viscosity, dfloat _lambda,
+	   const int _NBCTypes, const memory<int> _BCType) {
+    Setup(_platform, _mesh, _settings, _viscosity, _lambda, _NBCTypes, _BCType);
   }
 
   //setup
   void Setup(platform_t& _platform, mesh_t& _mesh,
-             settings_t& _settings, dfloat _lambda,
+             settings_t& _settings, dfloat _viscosity, dfloat _lambda,
              const int _NBCTypes, const memory<int> _BCType);
 
   void BoundarySetup();
