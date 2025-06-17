@@ -40,24 +40,24 @@ SOFTWARE.
 
 // Boundary conditions
 /* wall 1, inflow 2, outflow 3, x-slip 4, y-slip 5 */
-#define insVelocityDirichletConditions2D(bc, ndotUe, nu, t, x, y, nx, ny, uM, vM, uB, vB) \
+#define insVelocityDirichletConditions2D(bc, ndotUe, nu, t, x, y, nx, ny, uM, uB) \
   {									\
     if(bc==1){								\
-      *(uB) = 0.f;							\
-      *(vB) = 0.f;							\
+      uB[0] = 0.f;							\
+      uB[1] = 0.f;							\
     } else if(bc==2){							\
-      *(uB) = p_ubar;							\
-      *(vB) = p_vbar;							\
+      uB[0] = p_ubar;							\
+      uB[1] = p_vbar;							\
     } else if(bc==3){							\
       /* penalize tangential part */					\
-      *(uB) = (ndotUe>0) ? uM : 0;					\
-      *(vB) = (ndotUe>0) ? vM : 0;					\
+      uB[0] = (ndotUe>0) ? uM[0] : 0;					\
+      uB[1] = (ndotUe>0) ? uM[1] : 0;					\
     } else if(bc==4){							\
-      *(uB) = 0.f;							\
-      *(vB) = vM;							\
+      uB[0] = 0.f;							\
+      uB[1] = uM[1];							\
     } else if(bc==5){							\
-      *(uB) = uM;							\
-      *(vB) = 0.f;							\
+      uB[0] = uM[0];							\
+      uB[1] = 0.f;							\
     }									\
 }
 

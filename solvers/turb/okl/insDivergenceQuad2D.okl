@@ -102,35 +102,38 @@ SOFTWARE.
 
 #define surfaceTerms(sk,face,i, j)                                      \
   {                                                                     \
-  const dlong idM = vmapM[sk];                                          \
-  const dlong idP = vmapP[sk];                                          \
-                                                                        \
-  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];                            \
-  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];                            \
-  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];                            \
-  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];                        \
-                                                                        \
-  const dlong eM = e;                                                   \
-  const dlong eP = idP/p_Np;                                            \
-  const int vidM = idM%p_Np;                                            \
-  const int vidP = idP%p_Np;                                            \
-                                                                        \
-  const dlong qbaseM = eM*p_Np*p_NVfields + vidM;                       \
-  const dlong qbaseP = eP*p_Np*p_NVfields + vidP;                       \
-                                                                        \
-  const dfloat uM = U[qbaseM+0*p_Np], vM = U[qbaseM+1*p_Np];            \
-        dfloat uP = U[qbaseP+0*p_Np], vP = U[qbaseP+1*p_Np];            \
-                                                                        \
-  const int bc = EToB[face+p_Nfaces*e];                                 \
-  if(bc>0) {                                                            \
-  dfloat ndotU = 1;							\
-  insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); \
-    uP = 2.f*uP-uM;                                                     \
-    vP = 2.f*vP-vM;                                                     \
-  }                                                                     \
-                                                                        \
-  const dfloat sc = invWJ * sJ;                                         \
-  s_fluxU[es][j][i] = 0.5f*sc*(nx*(uP-uM) + ny*(vP-vM));                \
+  const dlong idM = vmapM[sk];						\
+  const dlong idP = vmapP[sk];						\
+  									\
+  const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
+  const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
+  const dfloat sJ = sgeo[sk*p_Nsgeo+p_SJID];				\
+  const dfloat invWJ = sgeo[sk*p_Nsgeo+p_WIJID];			\
+  									\
+  const dlong eM = e;							\
+  const dlong eP = idP/p_Np;						\
+  const int vidM = idM%p_Np;						\
+  const int vidP = idP%p_Np;						\
+  									\
+  const dlong qbaseM = eM*p_Np*p_NVfields + vidM;			\
+  const dlong qbaseP = eP*p_Np*p_NVfields + vidP;			\
+  									\
+  const dfloat uM = U[qbaseM+0*p_Np], vM = U[qbaseM+1*p_Np];		\
+  dfloat uP = U[qbaseP+0*p_Np], vP = U[qbaseP+1*p_Np];			\
+  									\
+  dfloat UM[p_NVfields] = {0.};						\
+  dfloat UP[p_NVfields] = {0.};						\
+  UM[0] = uM; UM[1] = vM;						\
+  UP[0] = uP; UP[1] = vP;						\
+  const int bc = EToB[face+p_Nfaces*e];					\
+  if(bc>0) {								\
+    dfloat ndotU = 1;							\
+    insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, UM, UP); \
+    UP[0] = 2.f*UP[0]-UM[0];						\
+    UP[1] = 2.f*UP[1]-UM[1];						\
+  }									\
+  const dfloat sc = invWJ * sJ;						\
+  s_fluxU[es][j][i] = 0.5f*sc*(nx*(UP[0]-UM[0]) + ny*(UP[1]-UM[1]));	\
   }
 
 @kernel void insDivergenceSurfaceQuad2D(const dlong Nelements,

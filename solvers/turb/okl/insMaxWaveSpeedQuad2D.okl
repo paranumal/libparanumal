@@ -84,19 +84,19 @@ SOFTWARE.
           const int vidM = idM%p_Np;
           const dlong qbaseM = e*p_Np*p_NVfields + vidM;
 
-          const dfloat UM = U[qbaseM+0*p_Np];
-          const dfloat VM = U[qbaseM+1*p_Np];
-
-          dfloat UP = UM;
-          dfloat VP = VM;
+	  dfloat UM[p_NVfields], UP[p_NVfields];
+	  UM[0] = U[qbaseM+0*p_Np];
+	  UM[1] = U[qbaseM+1*p_Np];
+	  UP[0] = UM[0];
+	  UP[1] = UM[1];
 
           //get boundary value
 	  dfloat ndotU = 1;
           insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM],  \
-                                           nx, ny, UM, VM, &UP, &VP);
+                                           nx, ny, UM, UP);
 
           //determine max wavespeed from boundary value
-          const dfloat Umax = sqrt(UP*UP+VP*VP);
+          const dfloat Umax = sqrt(UP[0]*UP[0]+UP[1]*UP[1]);
 
           s_maxSpeed[i] = (Umax > s_maxSpeed[i]) ? Umax : s_maxSpeed[i];
         }

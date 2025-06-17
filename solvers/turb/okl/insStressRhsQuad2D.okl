@@ -24,24 +24,25 @@
 
 */
 
-#define surfaceTerms(sk,face,i, j)                                      \
+#define surfaceTerms1(sk,face,i, j)                                      \
   {									\
     const dlong idM = vmapM[sk];					\
     const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
     const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
-                                                                        \
+    dfloat UM[p_NVfields] = {0.};					\
+    dfloat UP[p_NVfields] = {0.};					\
     dfloat dudxP=0.f, dudyP=0.f, uP=0.f;				\
     dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;				\
     const int bc = mapB[idM];						\
     if(bc>0) {								\
       dfloat ndotU = 1;							\
-      insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, &uP, &vP); \
+      insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, UM, UP); \
       insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);	\
     }									\
                                                                         \
-    s_u  [j][i]  = uP;							\
-    s_v  [j][i]  = vP;							\
+    s_u  [j][i]  = UP[0];						\
+    s_v  [j][i]  = UP[1];						\
     s_ndu[j][i] -= WsJ*(nx*dudxP + ny*dudyP);				\
     s_ndv[j][i] -= WsJ*(nx*dvdxP + ny*dvdyP);				\
   }
@@ -103,8 +104,8 @@
       const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
       const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-      surfaceTerms(sk0,0,i,0     );
-      surfaceTerms(sk2,2,i,p_Nq-1);
+      surfaceTerms1(sk0,0,i,0     );
+      surfaceTerms1(sk2,2,i,p_Nq-1);
     }
 
 
@@ -113,8 +114,8 @@
       const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
       const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-      surfaceTerms(sk1,1,p_Nq-1,j);
-      surfaceTerms(sk3,3,0     ,j);
+      surfaceTerms1(sk1,1,p_Nq-1,j);
+      surfaceTerms1(sk3,3,0     ,j);
     }
 
 
@@ -208,23 +209,24 @@
 }
 #undef surfaceTerms
 
-#define surfaceTerms(sk)                                                \
+#define surfaceTerms2(sk)						\
   {									\
     const dlong idM = vmapM[sk];					\
     const int bc = mapB[idM];						\
     if(bc>0) {								\
       const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];			\
       const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];			\
+      									\
+      const dfloat uM = UH[p_dim*idM+0];				\
+      const dfloat vM = UH[p_dim*idM+1];				\
                                                                         \
-      const dfloat uM = UH[p_dim*idM+0];					\
-      const dfloat vM = UH[p_dim*idM+1];					\
-                                                                        \
-      dfloat uP=0;							\
-      dfloat vP=0;							\
+      dfloat UM[p_NVfields] = {0.};					\
+      dfloat UP[p_NVfields] = {0.};					\
+      UM[0] = uM; UM[1] = vM;						\
       dfloat ndotU = 1;							\
-      insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, uM, vM, &uP, &vP); \
-      UH[p_dim*idM+0] = uP;							\
-      UH[p_dim*idM+1] = vP;							\
+      insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, UM, UP); \
+      UH[p_dim*idM+0] = UP[0];						\
+      UH[p_dim*idM+1] = UP[1];						\
     }									\
   }
 
@@ -249,8 +251,8 @@
         const dlong sk0 = e*p_Nfp*p_Nfaces + 0*p_Nfp + i;
         const dlong sk2 = e*p_Nfp*p_Nfaces + 2*p_Nfp + i;
 
-        surfaceTerms(sk0);
-        surfaceTerms(sk2);
+        surfaceTerms2(sk0);
+        surfaceTerms2(sk2);
       }
 
       // face 1 & 3
@@ -258,8 +260,8 @@
         const dlong sk1 = e*p_Nfp*p_Nfaces + 1*p_Nfp + j;
         const dlong sk3 = e*p_Nfp*p_Nfaces + 3*p_Nfp + j;
 
-        surfaceTerms(sk1);
-        surfaceTerms(sk3);
+        surfaceTerms2(sk1);
+        surfaceTerms2(sk3);
       }
     }
   }
