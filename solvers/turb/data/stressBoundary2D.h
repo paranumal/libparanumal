@@ -42,10 +42,16 @@ SOFTWARE.
   {							     \
     uB[0]  = 0.f;					     \
     uB[1]  = 0.f;					     \
+    uB[2]  = 0.f;					     \
+    uB[3]  = 0.f;					     \
     uxB[0] = uxM[0];					     \
     uyB[0] = uyM[0];					     \
     uxB[1] = uxM[1];					     \
     uyB[1] = uyM[1];					     \
+    uxB[2] = uxM[2];					     \
+    uyB[2] = uyM[2];					     \
+    uxB[3] = uxM[3];					     \
+    uyB[3] = uyM[3];					     \
   }
 
 /* Homogeneous Neumann boundary condition   */
@@ -53,10 +59,16 @@ SOFTWARE.
   {								\
   uB[0] = uM[0];						\
   uB[1] = uM[1];						\
+  uB[2] = uM[2];						\
+  uB[3] = uM[3];						\
   uxB[0] = 0.f;							\
   uxB[1] = 0.f;							\
+  uxB[2] = 0.f;							\
+  uxB[3] = 0.f;							\
   uyB[0] = 0.f;							\
   uyB[1] = 0.f;							\
+  uyB[2] = 0.f;							\
+  uyB[3] = 0.f;							\
   }
 
 /* Dirichlet 1, Neumann 2, Robin 3 (defaulted to Neumann for now) */
