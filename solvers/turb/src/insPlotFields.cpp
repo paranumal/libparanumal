@@ -79,6 +79,8 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P,
   memory<dfloat> Iu(mesh.plotNp);
   memory<dfloat> Iv(mesh.plotNp);
   memory<dfloat> Iw(mesh.plotNp);
+  memory<dfloat> Ik(mesh.plotNp);
+  memory<dfloat> Itau(mesh.plotNp);
 
   fprintf(fp, "      <PointData Scalars=\"scalars\">\n");
   if (U.length()!=0) {
@@ -88,7 +90,7 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P,
       mesh.PlotInterp(U + 0*mesh.Np + e*mesh.Np*NVfields, Iu, scratch);
       mesh.PlotInterp(U + 1*mesh.Np + e*mesh.Np*NVfields, Iv, scratch);
       if(mesh.dim==3)
-        mesh.PlotInterp(U + 2*mesh.Np + e*mesh.Np*NVfields, Iw, scratch);
+        mesh.PlotInterp(U + 2*mesh.Np + e*mesh.Np*NVfields, Iw, scratch);      
 
       for(int n=0;n<mesh.plotNp;++n){
         fprintf(fp, "       ");
@@ -116,6 +118,34 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P,
     fprintf(fp, "       </DataArray>\n");
   }
 
+  if(NVfields>mesh.dim && mesh.dim==2){
+
+    // write out kinetic turbulence var
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"K\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh.Nelements;++e){
+      mesh.PlotInterp(U+2*mesh.Np + e*mesh.Np*NVfields, Ik, scratch);
+
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%f\n", Ik[n]);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+    fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Tau\" Format=\"ascii\">\n");
+    for(dlong e=0;e<mesh.Nelements;++e){
+      mesh.PlotInterp(U+3*mesh.Np + e*mesh.Np*NVfields, Itau, scratch);
+
+      for(int n=0;n<mesh.plotNp;++n){
+        fprintf(fp, "       ");
+        fprintf(fp, "%f\n", Itau[n]);
+      }
+    }
+    fprintf(fp, "       </DataArray>\n");
+
+
+  }
+  
+#if 0
   if (Qfactor.length()!=0) {
     // write out Qfactor (embedded in 3 vector)
     fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Qfactor\" Format=\"ascii\">\n");
@@ -129,14 +159,14 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P,
     }
     fprintf(fp, "       </DataArray>\n");
   }
-
+#endif
   
   if (Vort.length()!=0) {
     // write out vorticity
     if(mesh.dim==2){
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        mesh.PlotInterp(Vort + e*mesh.Np*mesh.dim, Ip, scratch);
+        mesh.PlotInterp(Vort + e*mesh.Np*NVfields, Ip, scratch);
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");
@@ -146,9 +176,9 @@ void ins_t::PlotFields(memory<dfloat>& U, memory<dfloat>& P,
     } else {
       fprintf(fp, "        <DataArray type=\"Float32\" Name=\"Vorticity\" NumberOfComponents=\"3\" Format=\"ascii\">\n");
       for(dlong e=0;e<mesh.Nelements;++e){
-        mesh.PlotInterp(Vort + 0*mesh.Np + e*mesh.Np*3, Iu, scratch);
-        mesh.PlotInterp(Vort + 1*mesh.Np + e*mesh.Np*3, Iv, scratch);
-        mesh.PlotInterp(Vort + 2*mesh.Np + e*mesh.Np*3, Iw, scratch);
+        mesh.PlotInterp(Vort + 0*mesh.Np + e*mesh.Np*NVfields, Iu, scratch);
+        mesh.PlotInterp(Vort + 1*mesh.Np + e*mesh.Np*NVfields, Iv, scratch);
+        mesh.PlotInterp(Vort + 2*mesh.Np + e*mesh.Np*NVfields, Iw, scratch);
 
         for(int n=0;n<mesh.plotNp;++n){
           fprintf(fp, "       ");

@@ -40,6 +40,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   NVfields = (mesh.dim==3) ? 3:2; // Total Number of Velocity Fields
   NTfields = (mesh.dim==3) ? 4:3; // Total Velocity + Pressure
 
+  NVfields += 2; // k-tau
+  
   settings.getSetting("VISCOSITY", nu);
 
   cubature = (settings.compareSetting("ADVECTION TYPE", "CUBATURE")) ? 1:0;
@@ -133,6 +135,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     uNlocal = uSolver.Ndofs;
     uNhalo = uSolver.Nhalo;
 
+#if 0
+    
     if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
 
       uLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
@@ -212,6 +216,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
         wLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(wNlocal, platform, vSettings, comm);
 
     }
+#endif
     
     // Setup vector velocity stress solver
     std::cout << "Setting up stress solver: " << std::endl;
@@ -309,8 +314,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     massSettings = _settings.extractMassSettings();
     massSolver.Setup(platform, mesh, massSettings, NBCTypes, massBCType);
 
-    massNlocal = mesh.dim*massSolver.ogsMasked.Ngather;
-    massNhalo  = mesh.dim*massSolver.gHalo.Nhalo;
+    massNlocal = NVfields*massSolver.ogsMasked.Ngather;
+    massNhalo  = NVfields*massSolver.gHalo.Nhalo;
 
     std::cout << "MASS NGATHER: " << massNlocal << std::endl;
     
@@ -391,6 +396,12 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
   }
 
+  printf("nu=%g, SIGMAK=%g, SIGMATAU=%g\n", nu, SIGMAK, SIGMATAU);
+  
+  kernelInfo["defines/" "p_invNu"] = (dfloat)(1./nu);
+  kernelInfo["defines/" "p_invSigmaK"] = (dfloat)(1./SIGMAK);
+  kernelInfo["defines/" "p_invSigmaTau"] = (dfloat)(1./SIGMATAU);
+  
   // set kernel name suffix
   std::string suffix = mesh.elementSuffix();
   std::string oklFilePrefix = DINS "/okl/";
@@ -473,9 +484,13 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     }
   }
 
+
   // diffusion kernels
   if (settings.compareSetting("TIME INTEGRATOR","EXTBDF3")
     ||settings.compareSetting("TIME INTEGRATOR","SSBDF3")) {
+
+#if 0
+    
     fileName   = oklFilePrefix + "insVelocityRhs" + suffix + oklFileSuffix;
 
     if (vDisc_c0)
@@ -489,6 +504,8 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     velocityBCKernel =  platform.buildKernel(fileName, kernelName,
                                            kernelInfo);
 
+#endif
+    
     fileName = oklFilePrefix + "insStressRhs" + suffix + oklFileSuffix;
 
     if (vDisc_c0)

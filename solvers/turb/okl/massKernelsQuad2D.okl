@@ -46,9 +46,9 @@ SOFTWARE.
 
       // assumes w*J built into G entries
       dfloat r_GwJ = wJ[e*p_Np + j*p_Nq + i];
-      for(int fld=0;fld<p_Nfields;++fld){
-	dlong qid = e*p_Np*p_Nfields+fld*p_Np+j*p_Nq+i;
-	dlong Aqid = base*p_Nfields+fld;
+      for(int fld=0;fld<p_NVfields;++fld){
+	dlong qid = e*p_Np*p_NVfields+fld*p_Np+j*p_Nq+i;
+	dlong Aqid = base*p_NVfields+fld;
 	dfloat r_Aq = r_GwJ*q[qid];
 	Aq[Aqid] = r_Aq;
       }
@@ -78,10 +78,10 @@ SOFTWARE.
       // assumes w*J built into G entries
       dfloat r_GwJ = wJ[element*p_Np + j*p_Nq + i];
 
-      for(int fld=0;fld<p_Nfields;++fld){
-	dfloat qji = q[p_Nfields*id+fld];
+      for(int fld=0;fld<p_NVfields;++fld){
+	dfloat qji = q[p_NVfields*id+fld];
 	dfloat r_Aq = r_GwJ*qji;
-	Aq[base*p_Nfields+fld] = r_Aq;
+	Aq[base*p_NVfields+fld] = r_Aq;
       }
     }
   }
@@ -105,8 +105,8 @@ SOFTWARE.
 	const dlong nid = e*p_Np + m*p_Nq + n;
 	dfloat JW = wJ[e*p_Np + n + m*p_Nq];
 	
-	for(int fld=0;fld<p_Nfields;++fld){
-	  A[p_Nfields*nid+fld] = JW;
+	for(int fld=0;fld<p_NVfields;++fld){
+	  A[p_NVfields*nid+fld] = JW;
 	}
       }
     }
@@ -135,9 +135,9 @@ SOFTWARE.
 
     for(int n=0;n<p_Np;++n;@inner(0)){
       const dlong base = n + e*p_Np;
-      const dlong id = p_Nfields*GlobalToLocal[base];
-      const dlong idL = e*p_Np*p_Nfields+n;
-      for(int fld=0;fld<p_Nfields;++fld){
+      const dlong id = p_NVfields*GlobalToLocal[base];
+      const dlong idL = e*p_Np*p_NVfields+n;
+      for(int fld=0;fld<p_NVfields;++fld){
 	UL[idL+fld*p_Np] = UG[id+fld];
       }
     }
@@ -151,9 +151,9 @@ SOFTWARE.
   
 
   for(int n=0;n<Ngather;++n;@tile(256,@outer(0),@inner(0))){
-    dlong id = n*p_Nfields;
+    dlong id = n*p_NVfields;
     dfloat wn = wG[n];
-    for(int fld=0;fld<p_Nfields;++fld){
+    for(int fld=0;fld<p_NVfields;++fld){
       UG[id+fld] *= wn;
     }
   }

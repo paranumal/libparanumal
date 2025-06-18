@@ -83,9 +83,13 @@ SOFTWARE.
             if (beta!=0) {
               RHS[id+0*p_Np] = beta*RHS[id+0*p_Np] + alpha*(drdx*dpdr + dsdx*dpds);
               RHS[id+1*p_Np] = beta*RHS[id+1*p_Np] + alpha*(drdy*dpdr + dsdy*dpds);
+	      RHS[id+2*p_Np] = beta*RHS[id+2*p_Np];
+	      RHS[id+3*p_Np] = beta*RHS[id+3*p_Np];
             } else {
               RHS[id+0*p_Np] = alpha*(drdx*dpdr + dsdx*dpds);
               RHS[id+1*p_Np] = alpha*(drdy*dpdr + dsdy*dpds);
+              RHS[id+2*p_Np] = 0;
+	      RHS[id+3*p_Np] = 0;
             }
           }
         }

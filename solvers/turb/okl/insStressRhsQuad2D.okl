@@ -27,28 +27,38 @@
 #define p_one ((dfloat)1.)
 #define p_two ((dfloat)2.)
 
+// need to add k, tau here
+
 #define surfaceTerms1(sk,face,i, j)					\
   {									\
     const dlong idM = vmapM[sk];					\
     const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];				\
     const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];				\
     const dfloat WsJ = sgeo[sk*p_Nsgeo+p_WSJID];			\
-    const dfloat nuMod = nut[idM];			\
-    dfloat UM[p_NVfields] = {0.};					\
-    dfloat UP[p_NVfields] = {0.};					\
-    dfloat dudxP=0.f, dudyP=0.f, uP=0.f;				\
-    dfloat dvdxP=0.f, dvdyP=0.f, vP=0.f;				\
+    const dfloat r_nut = nut[idM];					\
+    dfloat nuU   = p_one + r_nut*p_invNu;				\
+    dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);			\
+    dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);		\
+    dfloat QM[p_NVfields] = {0.};					\
+    dfloat QP[p_NVfields] = {0.};					\
+    dfloat dQdxM[p_NVfields] = {0.};					\
+    dfloat dQdyM[p_NVfields] = {0.};					\
+    dfloat dQdxP[p_NVfields] = {0.};					\
+    dfloat dQdyP[p_NVfields] = {0.};					\
     const int bc = mapB[idM];						\
     if(bc>0) {								\
       dfloat ndotU = 1;							\
-      insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, UM, UP); \
-      insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, 0.f, 0.f, 0.f, 0.f, &dudxP, &dudyP, &dvdxP, &dvdyP);	\
+      insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, QM, QP); \
+      insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, dQdxM, dQdyM, dQdxP, dQdyP); \
     }									\
-                                                                        \
-    s_u  [j][i]  = UP[0];						\
-    s_v  [j][i]  = UP[1];						\
-    s_ndu[j][i] -= WsJ*nuMod*(p_two*nx*dudxP + ny*(dudyP+dvdxP));	\
-    s_ndv[j][i] -= WsJ*nuMod*(p_two*ny*dvdyP + nx*(dudyP+dvdxP));	\
+    s_u  [j][i]  = QP[0];						\
+    s_v  [j][i]  = QP[1];						\
+    s_k  [j][i]  = QP[2];						\
+    s_tau[j][i]  = QP[3];						\
+    s_ndu[j][i] -= WsJ*nuU*(p_two*nx*dQdxP[0] + ny*(dQdyP[0]+dQdxP[1])); \
+    s_ndv[j][i] -= WsJ*nuU*(p_two*ny*dQdyP[1] + nx*(dQdyP[0]+dQdxP[1])); \
+    s_ndk[j][i] -= WsJ*nuK*(nx*dQdxP[2] + ny*dQdyP[2]);			\
+    s_ndtau[j][i] -= WsJ*nuTau*(nx*dQdxP[3] + ny*dQdxP[3]);		\
   }
 
 
@@ -83,25 +93,39 @@
   for(dlong e=0;e<Nelements;e++;@outer(0)){
     @shared dfloat s_u[p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq];
+    @shared dfloat s_k[p_Nq][p_Nq];
+    @shared dfloat s_tau[p_Nq][p_Nq];
     @shared dfloat s_tmpur[p_Nq][p_Nq];
     @shared dfloat s_tmpus[p_Nq][p_Nq];
     @shared dfloat s_tmpvr[p_Nq][p_Nq];
     @shared dfloat s_tmpvs[p_Nq][p_Nq];
+    @shared dfloat s_tmpkr[p_Nq][p_Nq];
+    @shared dfloat s_tmpks[p_Nq][p_Nq];
+    @shared dfloat s_tmptaur[p_Nq][p_Nq];
+    @shared dfloat s_tmptaus[p_Nq][p_Nq];
     @shared dfloat s_ndu[p_Nq][p_Nq];
     @shared dfloat s_ndv[p_Nq][p_Nq];
+    @shared dfloat s_ndk[p_Nq][p_Nq];
+    @shared dfloat s_ndtau[p_Nq][p_Nq];
     @shared dfloat s_DT[p_Nq][p_Nq];
 
     @exclusive dfloat r_Au[p_Nq];
     @exclusive dfloat r_Av[p_Nq];
+    @exclusive dfloat r_Ak[p_Nq];
+    @exclusive dfloat r_Atau[p_Nq];
 
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
         s_u[j][i] = 0.;
         s_v[j][i] = 0.;
+	s_k[j][i] = 0.;
+        s_tau[j][i] = 0.;
+
         s_ndu[j][i] = 0.;
         s_ndv[j][i] = 0.;
-
+	s_ndk[j][i] = 0.;
+        s_ndtau[j][i] = 0.;
         s_DT[j][i] = DT[j*p_Nq+i];
       }
     }
@@ -134,19 +158,31 @@
 
         dfloat ur = 0.f, us = 0.f;
         dfloat vr = 0.f, vs = 0.f;
+	dfloat kr = 0.f, ks = 0.f;
+        dfloat taur = 0.f, taus = 0.f;
 
 #pragma unroll p_Nq
 	for(int n=0; n<p_Nq; ++n){
-	  dfloat Din = s_DT[i][n];
-	  dfloat Djn = s_DT[j][n];
+	  dfloat Din = s_DT[i][n]; 
 	  ur += Din*s_u[j][n];
 	  vr += Din*s_v[j][n];
+	  kr += Din*s_k[j][n];
+	  taur += Din*s_tau[j][n];
+	}
+
+#pragma unroll p_Nq
+	for(int n=0; n<p_Nq; ++n){
+	  dfloat Djn = s_DT[j][n];
 	  us += Djn*s_u[n][i];
 	  vs += Djn*s_v[n][i];
+	  ks += Djn*s_k[n][i];
+	  taus += Djn*s_tau[n][i];
 	}
 
         r_Au[j] = r_GwJ*lambda*s_u[j][i];
         r_Av[j] = r_GwJ*lambda*s_v[j][i];
+	r_Ak[j] = r_GwJ*lambda*s_k[j][i];
+        r_Atau[j] = r_GwJ*lambda*s_tau[j][i];
 
         const dlong base = e*p_Nvgeo*p_Np + j*p_Nq + i;
 
@@ -155,18 +191,30 @@
 	const dfloat sx = vgeo[base + p_SXID*p_Np];
 	const dfloat sy = vgeo[base + p_SYID*p_Np];
 	
-	const dfloat nuMod = nut[e*p_Np+j*p_Nq+i];
+	const dfloat r_nut = nut[e*p_Np+j*p_Nq+i];
+	dfloat nuU   = p_one + r_nut*p_invNu;
+	dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
+	dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
 	
 	dfloat ux = rx*ur + sx*us;
 	dfloat uy = ry*ur + sy*us;
 	dfloat vx = rx*vr + sx*vs;
 	dfloat vy = ry*vr + sy*vs;
+
+	dfloat kx = rx*kr + sx*ks;
+	dfloat ky = ry*kr + sy*ks;
+	dfloat taux = rx*taur + sx*taus;
+	dfloat tauy = ry*taur + sy*taus;
 	
-	s_tmpur[j][i] = r_GwJ*nuMod*(rx*p_two*ux + ry*(uy+vx));
-	s_tmpus[j][i] = r_GwJ*nuMod*(sx*p_two*ux + sy*(uy+vx));
-	
-	s_tmpvr[j][i] = r_GwJ*nuMod*(rx*(uy+vx) + ry*p_two*vy);
-	s_tmpvs[j][i] = r_GwJ*nuMod*(sx*(uy+vx) + sy*p_two*vy);
+	s_tmpur[j][i] = r_GwJ*nuU*(rx*p_two*ux + ry*(uy+vx));
+	s_tmpus[j][i] = r_GwJ*nuU*(sx*p_two*ux + sy*(uy+vx));
+	s_tmpvr[j][i] = r_GwJ*nuU*(rx*(uy+vx) + ry*p_two*vy);
+	s_tmpvs[j][i] = r_GwJ*nuU*(sx*(uy+vx) + sy*p_two*vy);
+
+	s_tmpkr[j][i] = r_GwJ*nuK*(rx*kx + ry*ky);
+	s_tmpks[j][i] = r_GwJ*nuK*(sx*kx + sy*ky);
+	s_tmptaur[j][i] = r_GwJ*nuTau*(rx*taux + ry*tauy);
+	s_tmptaus[j][i] = r_GwJ*nuTau*(sx*taux + sy*tauy);
       }
     }
 
@@ -175,26 +223,40 @@
       for(int j=0;j<p_Nq;++j){
         dfloat tmpu = 0.f;
         dfloat tmpv = 0.f;
+	dfloat tmpk = 0.f;
+        dfloat tmptau = 0.f;
 #pragma unroll p_Nq
 	for(int n=0;n<p_Nq;++n) {
 	  dfloat Dni = s_DT[n][i];
-	  dfloat Dnj = s_DT[n][j];
 	  tmpu += Dni*s_tmpur[j][n];
 	  tmpv += Dni*s_tmpvr[j][n];
+	  tmpk += Dni*s_tmpkr[j][n];
+	  tmptau += Dni*s_tmptaur[j][n];
+	}
+#pragma unroll p_Nq
+	for(int n=0;n<p_Nq;++n) {
+	  dfloat Dnj = s_DT[n][j];
 	  tmpu += Dnj*s_tmpus[n][i];
 	  tmpv += Dnj*s_tmpvs[n][i];
+	  tmpk += Dnj*s_tmpks[n][i];
+	  tmptau += Dnj*s_tmptaus[n][i];
 	}
 	
 	r_Au[j] += tmpu;
         r_Av[j] += tmpv;
+	r_Ak[j] += tmpk;
+        r_Atau[j] += tmptau;
       }
       
       for(int j=0;j<p_Nq;++j){
         const dfloat JW = wJ[i + j*p_Nq + e*p_Np];
         const dlong id = e*p_Np + j*p_Nq + i;
-        const dlong iid = p_dim*e*p_Np + j*p_Nq + i;
-        rhsU[p_dim*id+0] = nuInv*JW*RHS[iid+0*p_Np] - (r_Au[j] + s_ndu[j][i]); // need to fix lambda
-	rhsU[p_dim*id+1] = nuInv*JW*RHS[iid+1*p_Np] - (r_Av[j] + s_ndv[j][i]);
+        const dlong iid = p_NVfields*e*p_Np + j*p_Nq + i;
+        rhsU[p_NVfields*id+0] = nuInv*JW*RHS[iid+0*p_Np] - (r_Au[j] + s_ndu[j][i]); 
+	rhsU[p_NVfields*id+1] = nuInv*JW*RHS[iid+1*p_Np] - (r_Av[j] + s_ndv[j][i]);
+	rhsU[p_NVfields*id+2] = nuInv*JW*RHS[iid+2*p_Np] - (r_Ak[j] + s_ndk[j][i]); 
+	rhsU[p_NVfields*id+3] = nuInv*JW*RHS[iid+3*p_Np] - (r_Atau[j] + s_ndtau[j][i]);
+//	printf("rhsU[0]=%g,%g,%g,%g\n", rhsU[p_NVfields*id+0], rhsU[p_NVfields*id+1], rhsU[p_NVfields*id+2], rhsU[p_NVfields*id+3]);
       }
     }
   }
@@ -208,18 +270,22 @@
     if(bc>0) {								\
       const dfloat nx = sgeo[sk*p_Nsgeo+p_NXID];			\
       const dfloat ny = sgeo[sk*p_Nsgeo+p_NYID];			\
-      									\
-      const dfloat uM = UH[p_dim*idM+0];				\
-      const dfloat vM = UH[p_dim*idM+1];				\
-                                                                        \
+      const dfloat uM = UH[p_NVfields*idM+0];				\
+      const dfloat vM = UH[p_NVfields*idM+1];				\
+      const dfloat kM = UH[p_NVfields*idM+2];				\
+      const dfloat tauM = UH[p_NVfields*idM+3];				\
       dfloat UM[p_NVfields] = {0.};					\
       dfloat UP[p_NVfields] = {0.};					\
       UM[0] = uM;							\
       UM[1] = vM;							\
+      UM[2] = kM;							\
+      UM[3] = tauM;							\
       dfloat ndotU = 1;							\
       insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, UM, UP); \
-      UH[p_dim*idM+0] = UP[0];						\
-      UH[p_dim*idM+1] = UP[1];						\
+      UH[p_NVfields*idM+0] = UP[0];					\
+      UH[p_NVfields*idM+1] = UP[1];					\
+      UH[p_NVfields*idM+2] = UP[2];					\
+      UH[p_NVfields*idM+3] = UP[3];					\
     }									\
   }
 
@@ -264,9 +330,11 @@
     for(int j=0;j<p_Nq;++j;@inner(1)){
       for(int i=0;i<p_Nq;++i;@inner(0)){
         const dlong id = e*p_Np+j*p_Nq+i;
-        const dlong iid = e*p_Np*p_dim+j*p_Nq+i;
-        U[iid+0*p_Np] = UH[p_dim*id+0];
-        U[iid+1*p_Np] = UH[p_dim*id+1];
+        const dlong iid = e*p_Np*p_NVfields+j*p_Nq+i;
+        U[iid+0*p_Np] = UH[p_NVfields*id+0];
+        U[iid+1*p_Np] = UH[p_NVfields*id+1];
+	U[iid+2*p_Np] = UH[p_NVfields*id+2];
+        U[iid+3*p_Np] = UH[p_NVfields*id+3];
       }
     }
   }

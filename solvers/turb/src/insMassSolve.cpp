@@ -30,7 +30,7 @@ SOFTWARE.
 // 2. U = S*U
 void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
 
-  int Nfields = mesh.dim;
+  int Nfields = mesh.dim + 2; // include k-tau
   
   dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*Nfields;
   dlong Nglobal = (massSolver.Ndofs+massSolver.Nhalo);

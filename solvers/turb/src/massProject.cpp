@@ -110,7 +110,6 @@ void mass_t::BoundarySetup(){
 
   // TW
   o_weight  = platform.malloc<pfloat>(weight);
-  printf("Ngather=%d\n", Ngather);
   o_weightG = platform.malloc<pfloat>(weightG);
 
   // create a global numbering system
@@ -188,10 +187,6 @@ void mass_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
   if(0){
     memory<pfloat> tmp(Ndofs);
     o_invDiagA.copyTo(tmp);
-    //    for(int n=0;n<Ndofs;++n){
-    //      printf("tmp[%d]=%g\n", n, tmp[n]);
-    //    }
-
     memory<dfloat> MM(mesh.Np*mesh.Np);
     mesh.o_MM.copyTo(MM);
     for(int n=0;n<mesh.Np;++n){
@@ -208,18 +203,17 @@ void mass_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
 
 
 void mass_t::BuildOperatorDiagonalContinuousTri2D(memory<dfloat>& A) {
+  exit(-1);
   
   for(dlong eM=0;eM<mesh.Nelements;++eM){
     dfloat J   = mesh.wJ[eM];
 
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
-      dlong lid = n + eM*mesh.Np;
-      dlong uid = mesh.dim*lid + 0;
-      dlong vid = mesh.dim*lid + 1;
-      
-      A[mesh.dim*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
-      A[mesh.dim*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+2] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+3] = J*mesh.MM[n+n*mesh.Np];
     }
   }
 
@@ -242,13 +236,17 @@ void mass_t::BuildOperatorDiagonalContinuousQuad2D(memory<dfloat>& A) {
       for (int n=0;n<mesh.Nq;++n) {
         dlong iid = n+m*mesh.Nq;
 	dlong lid = iid + e*mesh.Np;
-	dlong uid = mesh.dim*lid + 0;
-	dlong vid = mesh.dim*lid + 1;
+	dlong uid = Nfields*lid + 0;
+	dlong vid = Nfields*lid + 1;
+	dlong kid = Nfields*lid + 2;
+	dlong tauid = Nfields*lid + 3;
 
 	dlong vbase = e*mesh.Np*mesh.Nvgeo;
 	dfloat JW = mesh.vgeo[vbase + n + m*mesh.Nq + mesh.JWID*mesh.Np];
 	A[uid] = JW;
 	A[vid] = JW;
+	A[kid] = JW;
+	A[tauid] = JW;
       }
     }
   }
@@ -262,13 +260,13 @@ void mass_t::BuildOperatorDiagonalContinuousTet3D(memory<dfloat>& A) {
     /* start with stiffness matrix  */
     for(int n=0;n<mesh.Np;++n){
       dlong lid = n + eM*mesh.Np;
-      dlong uid = mesh.dim*lid + 0;
-      dlong vid = mesh.dim*lid + 1;
-      dlong wid = mesh.dim*lid + 2;
+      dlong uid = Nfields*lid + 0;
+      dlong vid = Nfields*lid + 1;
+      dlong wid = Nfields*lid + 2;
       
-      A[mesh.dim*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
-      A[mesh.dim*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
-      A[mesh.dim*(eM*mesh.Np+n)+2] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+0] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+1] = J*mesh.MM[n+n*mesh.Np];
+      A[Nfields*(eM*mesh.Np+n)+2] = J*mesh.MM[n+n*mesh.Np]; // fix for k-tau later      
     }
   }
 }
@@ -582,6 +580,7 @@ void mass_t::Run(){
   int Nmax = std::max(mesh.Np, mesh.Nfaces*mesh.Nfp);
   kernelInfo["defines/" "p_Nmax"]= Nmax;
   kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_NVfields"]= Nfields;
 
   // set kernel name suffix
   std::string suffix = mesh.elementSuffix();
@@ -706,7 +705,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
 
   //  settings.report();
   
-  Nfields = mesh.dim;
+  Nfields = mesh.dim + 2; // velocity + k-tau
 
   //Trigger JIT kernel builds
   ogs::InitializeKernels(platform, ogs::Dfloat, ogs::Add);
@@ -749,6 +748,7 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   if (platform.device.mode() == "CUDA") blockMax = 1024;
 
   kernelInfo["defines/" "p_Nfields"]= Nfields;
+  kernelInfo["defines/" "p_NVfields"]= Nfields;
   
   int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;

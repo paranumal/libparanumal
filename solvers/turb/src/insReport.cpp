@@ -46,25 +46,26 @@ void ins_t::Report(dfloat time, int tstep){
   if (settings.compareSetting("OUTPUT TO FILE","TRUE")) {
 
     //compute vorticity
-    deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
+    deviceMemory<dfloat> o_Vort = platform.reserve<dfloat>(NVfields*mesh.Nelements*mesh.Np);
     vorticityKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Vort);
 
-    deviceMemory<dfloat> o_Qfactor = platform.reserve<dfloat>(mesh.dim*mesh.Nelements*mesh.Np);
-    qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Qfactor);
-    
+    //    deviceMemory<dfloat> o_Qfactor = platform.reserve<dfloat>(NVfields*mesh.Nelements*mesh.Np);
+    //    qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Qfactor);
+
     MassSolve(o_Vort);
-    MassSolve(o_Qfactor);
+    //    printf("MASS SOLVE: o_Qfactor\n");
+    //    MassSolve(o_Qfactor);
     
-    memory<dfloat> Vort(mesh.dim*mesh.Nelements*mesh.Np);
-    memory<dfloat> Qfactor(mesh.dim*mesh.Nelements*mesh.Np);
+    memory<dfloat> Vort(NVfields*mesh.Nelements*mesh.Np);
+    memory<dfloat> Qfactor(NVfields*mesh.Nelements*mesh.Np);
 
     // copy data back to host
     o_u.copyTo(u);
     o_p.copyTo(p);
     o_Vort.copyTo(Vort);
-    o_Qfactor.copyTo(Qfactor);
+    //    o_Qfactor.copyTo(Qfactor);
 
-    if(0){
+    if(1){
       // output field files
       std::string name;
       settings.getSetting("OUTPUT FILE NAME", name);
@@ -84,7 +85,7 @@ void ins_t::Report(dfloat time, int tstep){
       
       std::string sfname(fname);
       
-      PlotFrame(Vort, sfname, mesh.dim);
+      PlotFrame(Vort, sfname, NVfields);
     }
     
   }

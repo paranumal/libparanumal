@@ -40,6 +40,9 @@
 
 #define DINS LIBP_DIR"/solvers/turb/"
 
+#define SIGMAK 2.0
+#define SIGMATAU 2.0
+
 using namespace libp;
 
 class insSettings_t: public settings_t {

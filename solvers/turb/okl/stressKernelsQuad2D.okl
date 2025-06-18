@@ -24,8 +24,8 @@
 
 */
 
-
-#define p_two ((dfloat)2)
+#define p_one ((dfloat)1.)
+#define p_two ((dfloat)2.)
 
 // hex @kernel for screened coulomb potential mat-vec
 #define squareThreads				\
@@ -52,13 +52,19 @@
 
     @shared dfloat s_u[p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq];
+    @shared dfloat s_k[p_Nq][p_Nq];
+    @shared dfloat s_tau[p_Nq][p_Nq];
     @shared dfloat s_DT[p_Nq][p_Nq];
 
     // oh dear
     @shared dfloat s_tmpur[p_Nq][p_Nq];
     @shared dfloat s_tmpus[p_Nq][p_Nq];
     @shared dfloat s_tmpvr[p_Nq][p_Nq];
-    @shared dfloat s_tmpvs[p_Nq][p_Nq];    
+    @shared dfloat s_tmpvs[p_Nq][p_Nq];
+    @shared dfloat s_tmpkr[p_Nq][p_Nq];
+    @shared dfloat s_tmpks[p_Nq][p_Nq];
+    @shared dfloat s_tmptaur[p_Nq][p_Nq];
+    @shared dfloat s_tmptaus[p_Nq][p_Nq];    
     
     @exclusive dlong element;
     @exclusive dfloat r_Aq[p_Nfields];
@@ -69,8 +75,10 @@
       const dlong base = i + j*p_Nq + element*p_Np;
       const dlong id = GlobalToLocal[base];
 
-      s_u[j][i] = (id!=-1) ? q[id*p_Nfields+0] : 0.0;
-      s_v[j][i] = (id!=-1) ? q[id*p_Nfields+1] : 0.0;
+      s_u[j][i]   = (id!=-1) ? q[id*p_Nfields+0] : 0.0;
+      s_v[j][i]   = (id!=-1) ? q[id*p_Nfields+1] : 0.0;
+      s_k[j][i]   = (id!=-1) ? q[id*p_Nfields+2] : 0.0;
+      s_tau[j][i] = (id!=-1) ? q[id*p_Nfields+3] : 0.0;      
 
       // fetch DT to @shared
       s_DT[j][i] = DT[j*p_Nq+i];
@@ -92,52 +100,88 @@
       dfloat r_wJ = vgeo[base+p_JWID*p_Np];
 
       dfloat ur = 0, vr = 0, us= 0, vs = 0;
+      dfloat kr = 0, taur = 0, ks= 0, taus = 0;
 
 #pragma unroll p_Nq
       for(int n=0; n<p_Nq; ++n){
 	dfloat Din = s_DT[i][n];
-	dfloat Djn = s_DT[j][n];	
 	ur += Din*s_u[j][n];
 	vr += Din*s_v[j][n];
+	kr += Din*s_k[j][n];
+	taur += Din*s_tau[j][n];
+      }
+      
+#pragma unroll p_Nq
+      for(int n=0; n<p_Nq; ++n){
+	dfloat Djn = s_DT[j][n];	
 	us += Djn*s_u[n][i];
 	vs += Djn*s_v[n][i];
+	ks += Djn*s_k[n][i];
+	taus += Djn*s_tau[n][i];
       }
 
       dfloat ux = rx*ur + sx*us;
       dfloat uy = ry*ur + sy*us;
       dfloat vx = rx*vr + sx*vs;
       dfloat vy = ry*vr + sy*vs;
+
+      dfloat kx = rx*kr + sx*ks;
+      dfloat ky = ry*kr + sy*ks;
+      dfloat taux = rx*taur + sx*taus;
+      dfloat tauy = ry*taur + sy*taus;
       
       r_Aq[0] = r_wJ*lambda*s_u[j][i];
       r_Aq[1] = r_wJ*lambda*s_v[j][i];
-
-      r_wJ *= r_nut;
+      r_Aq[2] = r_wJ*lambda*s_k[j][i];
+      r_Aq[3] = r_wJ*lambda*s_tau[j][i];
 
       dfloat tmpur = rx*(p_two*ux) + ry*(uy+vx);
       dfloat tmpus = sx*(p_two*ux) + sy*(uy+vx);
       dfloat tmpvr = rx*(uy+vx) + ry*(p_two*vy);
       dfloat tmpvs = sx*(uy+vx) + sy*(p_two*vy);
 
-      s_tmpur[j][i] = r_wJ*tmpur;
-      s_tmpus[j][i] = r_wJ*tmpus;
-      s_tmpvr[j][i] = r_wJ*tmpvr;
-      s_tmpvs[j][i] = r_wJ*tmpvs;
+      dfloat tmpkr = rx*kx + ry*ky;
+      dfloat tmpks = sx*kx + sy*ky;
+      dfloat tmptaur = rx*taux + ry*tauy;
+      dfloat tmptaus = sx*taux + sy*tauy;
+
+      dfloat nuU   = p_one + r_nut*p_invNu;
+      dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
+      dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
+     
+      s_tmpur[j][i] = (nuU*r_wJ)*tmpur;
+      s_tmpus[j][i] = (nuU*r_wJ)*tmpus;
+      s_tmpvr[j][i] = (nuU*r_wJ)*tmpvr;
+      s_tmpvs[j][i] = (nuU*r_wJ)*tmpvs;
+
+      s_tmpkr[j][i] = (nuK*r_wJ)*tmpkr;
+      s_tmpks[j][i] = (nuK*r_wJ)*tmpks;
+      s_tmptaur[j][i] = (nuTau*r_wJ)*tmptaur;
+      s_tmptaus[j][i] = (nuTau*r_wJ)*tmptaus;
     }
 
     @barrier();
     
     squareThreads{
 
-      dfloat tmpu = 0, tmpv = 0;
+      dfloat tmpu = 0, tmpv = 0, tmpk = 0, tmptau = 0;
 
 #pragma unroll p_Nq
       for(int n=0;n<p_Nq;++n) {
 	dfloat Dni = s_DT[n][i];
-	dfloat Dnj = s_DT[n][j];
 	tmpu += Dni*s_tmpur[j][n];
 	tmpv += Dni*s_tmpvr[j][n];
+	tmpk += Dni*s_tmpkr[j][n];
+	tmptau += Dni*s_tmptaur[j][n];
+      }
+
+#pragma unroll p_Nq
+      for(int n=0;n<p_Nq;++n) {
+	dfloat Dnj = s_DT[n][j];
 	tmpu += Dnj*s_tmpus[n][i];
 	tmpv += Dnj*s_tmpvs[n][i];
+	tmpk += Dnj*s_tmpks[n][i];
+	tmptau += Dnj*s_tmptaus[n][i];
       }
 
       /*
@@ -151,7 +195,10 @@
 
       r_Aq[0] += tmpu;
       r_Aq[1] += tmpv;
-      
+#if 1
+      r_Aq[2] += tmpk;
+      r_Aq[3] += tmptau;
+#endif
       const dlong base = p_Nfields*(element*p_Np + j*p_Nq + i);
       for(int fld=0;fld<p_Nfields;++fld){
 	Aq[base+fld] = r_Aq[fld];
@@ -209,7 +256,7 @@
     
     for (int m=0;m<p_Nq;++m;@inner(1)) {
       for (int n=0;n<p_Nq;++n;@inner(0)) {
-	dfloat Au = 0, Av = 0;
+	dfloat Au = 0, Av = 0, Ak = 0, Atau = 0;
 
 	const dlong nid = e*p_Np + m*p_Nq + n;
 	const dfloat fac = p_two;
@@ -226,13 +273,26 @@
 	    dfloat rx = vgeo[vbase + id + p_RXID*p_Np];
 	    dfloat ry = vgeo[vbase + id + p_RYID*p_Np];
 	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
-	    dfloat nut_km = nut[e*p_Np+id];
 
-	    dfloat uGrr = (fac*rx*rx + ry*ry)*nut_km*wJ;
-            Au += uGrr*Dkn*Dkn; // strided for gather
+	    dfloat r_nut = nut[e*p_Np+id];
+	    dfloat nuU   = p_one + r_nut*p_invNu;
+	    dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
+	    dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
+
+	    dfloat gtmpu = wJ*(fac*rx*rx + ry*ry);
+	    dfloat gtmpv = wJ*(fac*ry*ry + rx*rx);
+	    dfloat gtmpkTau = wJ*(rx*rx+ry*ry);
+	    dfloat uGrr = gtmpu*nuU;
+            Au += uGrr*(Dkn*Dkn); // strided for gather
 	    
-	    dfloat vGrr = (fac*ry*ry + rx*rx)*nut_km*wJ;
-	    Av += vGrr*Dkn*Dkn;
+	    dfloat vGrr = gtmpv*nuU;
+	    Av += vGrr*(Dkn*Dkn);
+
+	    dfloat kGrr = gtmpkTau*nuK;
+	    Ak += kGrr*(Dkn*Dkn);
+
+	    dfloat tauGrr = gtmpkTau*nuTau;
+	    Atau += tauGrr*(Dkn*Dkn);
           }
 
 
@@ -242,15 +302,29 @@
 	    dfloat sx = vgeo[vbase + id + p_SXID*p_Np];
 	    dfloat sy = vgeo[vbase + id + p_SYID*p_Np];
 	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
-	    dfloat nut_nk = nut[e*p_Np+id];
+
+	    dfloat r_nut = nut[e*p_Np+id];
+	    dfloat nuU   = p_one + r_nut*p_invNu;
+	    dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
+	    dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
+
+	    dfloat gtmpu = wJ*(fac*sx*sx + sy*sy);
+	    dfloat gtmpv = wJ*(fac*sy*sy + sx*sx);
+	    dfloat gtmpkTau = wJ*(sx*sx+sy*sy);
+	    dfloat uGss = gtmpu*nuU;
+            Au += uGss*(Dkm*Dkm); // strided for gather
 	    
-	    dfloat uGss = (fac*sx*sx + sy*sy)*nut_nk*wJ;
-            Au += uGss*Dkm*Dkm; // strided for gather
-	    
-	    dfloat vGss = (fac*sy*sy + sx*sx)*nut_nk*wJ;
-	    Av += vGss*Dkm*Dkm;
+	    dfloat vGss = gtmpv*nuU;
+	    Av += vGss*(Dkm*Dkm);
+
+	    dfloat kGss = gtmpkTau*nuK;
+	    Ak += kGss*(Dkm*Dkm);
+
+	    dfloat tauGss = gtmpkTau*nuTau;
+	    Atau += tauGss*(Dkm*Dkm);
           }
 
+	  // cross terms
 	  {
             int id = n+m*p_Nq;
 	    dfloat Dnn = s_D[n][n];
@@ -260,25 +334,39 @@
 	    dfloat sx = vgeo[vbase + id + p_SXID*p_Np];
 	    dfloat sy = vgeo[vbase + id + p_SYID*p_Np];
 	    dfloat wJ = vgeo[vbase + id + p_JWID*p_Np];	    
-	    dfloat nut_nm = nut[e*p_Np+id];
+	    
+	    dfloat r_nut = nut[e*p_Np+id];
+	    dfloat nuU   = p_one + r_nut*p_invNu;
+	    dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
+	    dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
 
-	    // check this
-	    dfloat uGrs = p_two*(fac*rx*sx + ry*sy)*nut_nm*wJ;
-            Au += uGrs*Dnn*Dmm; // strided for gather
+	    dfloat gtmpu = p_two*wJ*(fac*rx*sx + ry*sy);
+	    dfloat gtmpv = p_two*wJ*(fac*ry*sy + rx*sx);
+	    dfloat gtmpkTau = p_two*wJ*(rx*sx+sy*sy);
+	    dfloat uGrs = gtmpu*nuU;
+            Au += uGrs*(Dnn*Dmm); // strided for gather
 	    
-	    dfloat vGrs = p_two*(fac*ry*sy + rx*sx)*nut_nm*wJ;
-	    Av += vGrs*Dnn*Dmm;
-	    
-	    // do not need off diagonal blocks
+	    dfloat vGrs = gtmpv*nuU;
+	    Av += vGrs*(Dnn*Dmm);
+
+	    dfloat kGrs = gtmpkTau*nuK;
+	    Ak += kGrs*(Dnn*Dmm);
+
+	    dfloat tauGrs = gtmpkTau*nuTau;
+	    Atau += tauGrs*(Dnn*Dmm);
 	  }
 	  
 	  dfloat JW = vgeo[vbase + n + m*p_Nq + p_JWID*p_Np];
           Au += JW*lambda;
 	  Av += JW*lambda;
+          Ak += JW*lambda;
+	  Atau += JW*lambda;
 	  
         } else {
           Au = 1; //just put a 1 so A is invertable
 	  Av = 1;
+	  Ak = 1;
+	  Atau = 1;
         }
       
 	//add the rank boost for the allNeumann Poisson problem
@@ -286,11 +374,20 @@
 	  if(bc!=1) { //dont fill rows for masked nodes
 	    Au += neumannBoost;
 	    Av += neumannBoost;
+	    Ak += neumannBoost;
+	    Atau += neumannBoost;
 	  }
 	}
-	
+      
 	A[p_Nfields*nid+0] = Au;
 	A[p_Nfields*nid+1] = Av;
+	A[p_Nfields*nid+2] = Ak;
+	A[p_Nfields*nid+3] = Atau;
+
+#if 0
+	printf("Au=(%g,%g,%g,%g)\n", Au, Av, Ak, Atau);
+#endif
+	
       }
     }
   }

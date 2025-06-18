@@ -84,9 +84,11 @@ SOFTWARE.
             const dfloat uy = drdy*dudr + dsdy*duds;
             const dfloat vx = drdx*dvdr + dsdx*dvds;
 
-            const dlong id = p_dim*e*p_Np+j*p_Nq +i;
+            const dlong id = p_NVfields*e*p_Np+j*p_Nq +i;
             Vort[id] = vx-uy;
 	    Vort[id+p_Np] = 0;
+	    Vort[id+2*p_Np] = 0;
+	    Vort[id+3*p_Np] = 0;
           }
         }
       }

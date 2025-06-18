@@ -25,9 +25,9 @@ SOFTWARE.
 
 */
 
+#include <math.h>
 #include "ins.hpp"
 #include "stress.hpp"
-
 
 //  Solves gamma*U - nu*Laplacian*U = rhs
 void ins_t::StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
@@ -68,7 +68,7 @@ void ins_t::StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
 		  o_rhsU);
   
   int maxIter = 5000;
-  int verbose = 0;
+  int verbose = false;
 
   stressSolver.lambda = gamma/nu;
 
@@ -76,15 +76,37 @@ void ins_t::StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
   if (vDisc_c0){
 
     //    printf("SOLVING U *********************\n");
-    // gather, solve, scatter
-    deviceMemory<dfloat> o_GrhsU = platform.reserve<dfloat>(NVfields*(uSolver.Ndofs+uSolver.Nhalo));
-    deviceMemory<dfloat> o_GUH   = platform.reserve<dfloat>(NVfields*(uSolver.Ndofs+uSolver.Nhalo));
+    deviceMemory<dfloat> o_GrhsU = platform.reserve<dfloat>(stressSolver.Ndofs+stressSolver.Nhalo);
+    deviceMemory<dfloat> o_GUH   = platform.reserve<dfloat>(stressSolver.Ndofs+stressSolver.Nhalo);
+
+    //    printf("NVfields=%d, stress Ndofs: %d Nhalo: %d\n", NVfields, stressSolver.Ndofs, stressSolver.Nhalo);
 
     stressSolver.ogsMasked.Gather(o_GrhsU, o_rhsU, NVfields, ogs::Add, ogs::Trans);
+
+    if(0){
+      memory<dfloat> GrhsU(stressSolver.Ndofs+stressSolver.Nhalo);
+      o_GrhsU.copyTo(GrhsU);
+      for(int n=0;n<stressSolver.Ndofs;++n){
+	if(isnan(GrhsU[n]))
+	  printf("GrhsU[%d]=%g\n", n, GrhsU[n]);
+      }
+    }
+    
     NiterU = stressSolver.Solve(stressLinearSolver, o_GUH, o_GrhsU, velTOL, maxIter, verbose);
+
+    if(0){
+      memory<dfloat> GUH(stressSolver.Ndofs+stressSolver.Nhalo);
+      o_GUH.copyTo(GUH);
+      for(int n=0;n<stressSolver.Ndofs;++n){
+	if(isnan(GUH[n]))
+	  printf("GUH[%d]=%g\n", n, GUH[n]);
+      }
+    }
+    
     stressSolver.ogsMasked.Scatter(o_UH, o_GUH, NVfields, ogs::NoTrans);
 
-    o_GUH.free(); o_GrhsU.free();
+    o_GUH.free();
+    o_GrhsU.free();
 
     
   } else {

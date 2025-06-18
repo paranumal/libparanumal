@@ -41,12 +41,16 @@ SOFTWARE.
 
       dfloat r_u = 0.0;
       dfloat r_v = 0.0;
+      dfloat r_k = 0.0;
+      dfloat r_tau = 0.0;	
       dfloat r_p = 0.0;
 
-      insInitialConditions2D(nu, time, x[id], y[id], &r_u, &r_v, &r_p);
+      insInitialConditions2D(nu, time, x[id], y[id], &r_u, &r_v, &r_k, &r_tau, &r_p);
 
       U[iid+0*p_Np] = r_u;
       U[iid+1*p_Np] = r_v;
+      U[iid+2*p_Np] = r_k;
+      U[iid+3*p_Np] = r_tau;
       P[id] = r_p;
     }
   }

@@ -99,13 +99,17 @@ SOFTWARE.
 
 	const dlong nid = e*p_Np + m*p_Nq + n;
 	
-	dfloat Au = 0, Av = 0;
+	dfloat Au = 0, Av = 0, Ak = 0, Atau = 0;
 	dfloat JW = wJ[e*p_Np + n + m*p_Nq];
 	Au += JW;
 	Av += JW;
+	Ak += JW;
+	Atau += JW;
 	
 	A[p_Nfields*nid+0] = Au;
 	A[p_Nfields*nid+1] = Av;
+	A[p_Nfields*nid+2] = Ak;
+	A[p_Nfields*nid+3] = Atau;
       }
     }
   }
