@@ -162,7 +162,8 @@ public:
 
   kernel_t stressRhsKernel;
   kernel_t stressBCKernel;
-  
+  kernel_t stressUpdateTurbulentViscosityKernel;
+
   kernel_t vorticityKernel;
   kernel_t qfactorKernel;
 

@@ -28,8 +28,8 @@
 #define p_vbar 0.0
 #define p_pbar 1.0
 
-#define p_kbar 1.0
-#define p_taubar 1.0
+#define p_kbar 0.0
+#define p_taubar 0.0
 
 #define copysign(a) ( ((a)<0) ? -1.f : 1.f )
 

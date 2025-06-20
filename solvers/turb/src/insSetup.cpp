@@ -316,8 +316,6 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
   }
 
   dfloat SIGMAK, SIGMATAU, ALPHA, BETA, BETASTAR;
-  printf("Reading setttings\n");
-  settings.report();
   
   settings.getSetting("K-TAU ALPHA",    ALPHA);
   settings.getSetting("K-TAU BETA",     BETA);
@@ -440,7 +438,12 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
                                            kernelInfo);
 
 #endif
+
+    fileName = oklFilePrefix + "stressKernels" + oklFileSuffix;
+    kernelName = "stressUpdateTurbulentViscosity";
     
+    stressUpdateTurbulentViscosityKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
+
     fileName = oklFilePrefix + "insStressRhs" + suffix + oklFileSuffix;
 
     if (vDisc_c0)
