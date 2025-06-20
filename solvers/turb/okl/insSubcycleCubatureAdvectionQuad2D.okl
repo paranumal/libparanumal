@@ -316,7 +316,7 @@ SOFTWARE.
 	      divVy += Pni*s_sydivV[es][j][n];
 	    }
 //	    dfloat tauVol = 2.5e-3; // fix later  -2.e-3; // fix later
-	    dfloat tauVol = 0.25*volh;
+	    dfloat tauVol = 0.25*volh;  // 0.25
             const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
 
 #pragma unroll p_NVfields	    

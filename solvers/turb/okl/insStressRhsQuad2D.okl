@@ -205,7 +205,7 @@
 	dfloat ky = ry*kr + sy*ks;
 	dfloat taux = rx*taur + sx*taus;
 	dfloat tauy = ry*taur + sy*taus;
-	
+
 	s_tmpur[j][i] = r_GwJ*nuU*(rx*p_two*ux + ry*(uy+vx));
 	s_tmpus[j][i] = r_GwJ*nuU*(sx*p_two*ux + sy*(uy+vx));
 	s_tmpvr[j][i] = r_GwJ*nuU*(rx*(uy+vx) + ry*p_two*vy);

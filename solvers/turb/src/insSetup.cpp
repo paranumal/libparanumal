@@ -135,94 +135,13 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     uNlocal = uSolver.Ndofs;
     uNhalo = uSolver.Nhalo;
 
-#if 0
-    
-    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
-
-      uLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
-
-      uLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("LINEAR SOLVER","PCG")){
-
-#if 0
-      uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::pcg<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::pcg<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
-#else
-      printf("Building velocity\n");
-      uLinearSolver.Setup<LinearSolver::pcg<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
-      printf("Copying velocity\n");
-      vLinearSolver = uLinearSolver;
-      wLinearSolver = uLinearSolver;
-#endif
-    } else if (vSettings.compareSetting("LINEAR SOLVER","PGMRES")){
-
-      uLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::pgmres<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("LINEAR SOLVER","PMINRES")){
-
-      uLinearSolver.Setup<LinearSolver::pminres<dfloat>>(uNlocal, uNhalo, platform, vSettings, comm);
-      vLinearSolver.Setup<LinearSolver::pminres<dfloat>>(vNlocal, vNhalo, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.Setup<LinearSolver::pminres<dfloat>>(wNlocal, wNhalo, platform, vSettings, comm);
-    }
-
-    if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "LAST")) {
-
-      uLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(vNlocal, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Last<dfloat>>(wNlocal, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "ZERO")) {
-
-      uLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(vNlocal, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Zero<dfloat>>(wNlocal, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "CLASSIC")) {
-
-      uLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(vNlocal, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::ClassicProjection<dfloat>>(wNlocal, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "QR")) {
-
-      uLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(vNlocal, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(wNlocal, platform, vSettings, comm);
-
-    } else if (vSettings.compareSetting("INITIAL GUESS STRATEGY", "EXTRAP")) {
-
-      uLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(uNlocal, platform, vSettings, comm);
-      vLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(vNlocal, platform, vSettings, comm);
-      if (mesh.dim==3)
-        wLinearSolver.SetupInitialGuess<InitialGuess::Extrap<dfloat>>(wNlocal, platform, vSettings, comm);
-
-    }
-#endif
     
     // Setup vector velocity stress solver
     std::cout << "Setting up stress solver: " << std::endl;
     dfloat viscosity;
     settings.getSetting("VISCOSITY", viscosity);
-    stressSolver.Setup(platform, mesh, vSettings, viscosity, lambda, NBCTypes, uBCType);
+    //    stressSolver.Setup(platform, mesh, vSettings, viscosity, lambda, NBCTypes, uBCType);
+    stressSolver.Setup(platform, mesh, _settings, viscosity, lambda, NBCTypes, uBCType);
     stressLinearSolver.Setup<LinearSolver::pcg<dfloat>>(stressSolver.Ndofs, stressSolver.Nhalo, platform, vSettings, comm);
     stressLinearSolver.SetupInitialGuess<InitialGuess::RollingQRProjection<dfloat>>(stressSolver.Ndofs, platform, vSettings, comm);
     
@@ -271,7 +190,7 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
       pNhalo  = mesh.totalHaloPairs*mesh.Np;
     }
 
-    if (vSettings.compareSetting("LINEAR SOLVER","NBPCG")){
+    if (pSettings.compareSetting("LINEAR SOLVER","NBPCG")){
       pLinearSolver.Setup<LinearSolver::nbpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
     } else if (pSettings.compareSetting("LINEAR SOLVER","NBFPCG")){
       pLinearSolver.Setup<LinearSolver::nbfpcg<dfloat>>(pNlocal, pNhalo, platform, pSettings, comm);
@@ -396,7 +315,23 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     kernelInfo["defines/" "p_cubNblockS"]= cubNblockS;
   }
 
-  printf("nu=%g, SIGMAK=%g, SIGMATAU=%g\n", nu, SIGMAK, SIGMATAU);
+  dfloat SIGMAK, SIGMATAU, ALPHA, BETA, BETASTAR;
+  printf("Reading setttings\n");
+  settings.report();
+  
+  settings.getSetting("K-TAU ALPHA",    ALPHA);
+  settings.getSetting("K-TAU BETA",     BETA);
+  settings.getSetting("K-TAU BETASTAR", BETASTAR);
+  settings.getSetting("K-TAU SIGMAK",   SIGMAK);
+  settings.getSetting("K-TAU SIGMATAU", SIGMATAU);
+  
+  kernelInfo["defines/" "p_invNu"] = (dfloat)(1./nu);
+  kernelInfo["defines/" "p_ALPHA"] = (dfloat)(ALPHA);
+  kernelInfo["defines/" "p_BETA"] = (dfloat)(BETA);
+  kernelInfo["defines/" "p_BETASTAR"] = (dfloat)(BETASTAR);
+  kernelInfo["defines/" "p_invSigmaK"] = (dfloat)(1./SIGMAK);
+  kernelInfo["defines/" "p_invSigmaTau"] = (dfloat)(1./SIGMATAU);
+
   
   kernelInfo["defines/" "p_invNu"] = (dfloat)(1./nu);
   kernelInfo["defines/" "p_invSigmaK"] = (dfloat)(1./SIGMAK);

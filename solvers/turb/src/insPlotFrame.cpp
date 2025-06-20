@@ -171,7 +171,7 @@ void ins_t::PlotFrame(memory<dfloat>& Q, std::string fileName, int plotNfields) 
   
   //--- Step 4. Set up image buffer with aspect ratio matching the mesh ---
   // Choose target resolution for the longer side.
-  int targetResolution = 4800;
+  int targetResolution = 9600;
   dfloat meshWidth = maxX - minX;
   dfloat meshHeight = maxY - minY;
   int width, height;

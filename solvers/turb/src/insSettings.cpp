@@ -35,8 +35,28 @@ insSettings_t::insSettings_t(comm_t& _comm):
              "Boundary and Initial conditions header");
 
   newSetting("VISCOSITY",
-             "1.0",
-             "Diffusion strength");
+	     "1e-2",
+             "viscosity");
+  
+  newSetting("K-TAU ALPHA",
+	     "0.56",
+             "k-tau: production rate constant for tau");
+
+  newSetting("K-TAU BETA",
+	     "0.075",
+             "k-tau: relaxation constant for tau");
+
+  newSetting("K-TAU BETASTAR",
+	     "0.09",
+             "k-tau: relaxation constant for k");
+
+  newSetting("K-TAU SIGMAK",
+             "1.6666666666",
+             "k-tau: diffusion scaling parameter for k");
+  
+  newSetting("K-TAU SIGMATAU",
+	     "2.0",
+             "k-tau: diffusion scaling parameter for tau");
 
   newSetting("ADVECTION TYPE",
              "COLLOCATION",
@@ -114,6 +134,9 @@ insSettings_t::insSettings_t(comm_t& _comm):
              "FALSE",
              "Use filter prior to mass projection of velocity",
              {"TRUE", "FALSE"});
+
+
+
   
   ellipticAddSettings(*this, "VELOCITY ");
   parAlmond::AddSettings(*this, "VELOCITY ");

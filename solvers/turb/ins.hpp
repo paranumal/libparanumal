@@ -36,12 +36,16 @@
 #include "elliptic.hpp"
 #include "mass.hpp"
 #include "initialGuess.hpp"
+
+class insSettings_t;
 #include "stress.hpp"
 
 #define DINS LIBP_DIR"/solvers/turb/"
 
+#if 0
 #define SIGMAK 2.0
 #define SIGMATAU 2.0
+#endif
 
 using namespace libp;
 

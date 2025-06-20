@@ -518,15 +518,18 @@ void stress_t::BuildOperatorDiagonalContinuousHex3D(memory<dfloat>& A) {
 
 
 void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
-		     settings_t& _settings, dfloat viscosity, dfloat _lambda,
+		     insSettings_t& _insSettings, dfloat viscosity, dfloat _lambda,
                        const int _NBCTypes, const memory<int> _BCType){
 
   platform = _platform;
   mesh = _mesh;
   comm = _mesh.comm;
-  settings = _settings;
+  //  settings = _settings;
   lambda = _lambda;
 
+  settings = _insSettings.extractVelocitySettings();
+  stressSettings = _insSettings;
+  
   Nfields = mesh.dim+2; // velocity + k + tau
 
   //Trigger JIT kernel builds
@@ -573,12 +576,24 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
   int blockMax = 256;
   if (platform.device.mode() == "CUDA") blockMax = 512;
 
+  
   kernelInfo["defines/" "p_Nfields"]= Nfields;
 
+  dfloat SIGMAK, SIGMATAU, ALPHA, BETA, BETASTAR;
+
+  stressSettings.getSetting("K-TAU ALPHA",    ALPHA);
+  stressSettings.getSetting("K-TAU BETA",     BETA);
+  stressSettings.getSetting("K-TAU BETASTAR", BETASTAR);
+  stressSettings.getSetting("K-TAU SIGMAK",   SIGMAK);
+  stressSettings.getSetting("K-TAU SIGMATAU", SIGMATAU);
+
   kernelInfo["defines/" "p_invNu"] = (dfloat)(1./viscosity);
+  kernelInfo["defines/" "p_ALPHA"] = (dfloat)(ALPHA);
+  kernelInfo["defines/" "p_BETA"] = (dfloat)(BETA);
+  kernelInfo["defines/" "p_BETASTAR"] = (dfloat)(BETASTAR);
   kernelInfo["defines/" "p_invSigmaK"] = (dfloat)(1./SIGMAK);
   kernelInfo["defines/" "p_invSigmaTau"] = (dfloat)(1./SIGMATAU);
-  
+
   int NblockV = std::max(1,blockMax/mesh.Np);
   kernelInfo["defines/" "p_NblockV"]= NblockV;
 

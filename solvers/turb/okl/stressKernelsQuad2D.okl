@@ -148,12 +148,25 @@
       dfloat nuU   = p_one + r_nut*p_invNu;
       dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
       dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
-     
-      s_tmpur[j][i] = (nuU*r_wJ)*tmpur;
-      s_tmpus[j][i] = (nuU*r_wJ)*tmpus;
-      s_tmpvr[j][i] = (nuU*r_wJ)*tmpvr;
-      s_tmpvs[j][i] = (nuU*r_wJ)*tmpvs;
 
+      dfloat divU = ux + vy;
+      dfloat tauVol = 100.*divU; // 0.*divU*(r_wJ*tauVol);
+      
+      s_tmpur[j][i] = r_wJ*(nuU*tmpur + rx*tauVol);
+      s_tmpus[j][i] = r_wJ*(nuU*tmpus + sx*tauVol);
+      s_tmpvr[j][i] = r_wJ*(nuU*tmpvr + ry*tauVol);
+      s_tmpvs[j][i] = r_wJ*(nuU*tmpvs + sy*tauVol);
+
+      // divergence condition here
+#if 0
+      dfloat divU = ux + vy;
+      dfloat tauVol = 0.*divU*(r_wJ*tauVol);
+      s_tmpur[j][i] += rx*tauVol;
+      s_tmpus[j][i] += sx*tauVol;
+      s_tmpvr[j][i] += ry*tauVol;
+      s_tmpvs[j][i] += sy*tauVol;
+#endif
+      
       s_tmpkr[j][i] = (nuK*r_wJ)*tmpkr;
       s_tmpks[j][i] = (nuK*r_wJ)*tmpks;
       s_tmptaur[j][i] = (nuTau*r_wJ)*tmptaur;
@@ -282,17 +295,19 @@
 	    dfloat gtmpu = wJ*(fac*rx*rx + ry*ry);
 	    dfloat gtmpv = wJ*(fac*ry*ry + rx*rx);
 	    dfloat gtmpkTau = wJ*(rx*rx+ry*ry);
+
 	    dfloat uGrr = gtmpu*nuU;
-            Au += uGrr*(Dkn*Dkn); // strided for gather
+	    dfloat tmp = Dkn*Dkn;
+            Au += uGrr*tmp; // strided for gather
 	    
 	    dfloat vGrr = gtmpv*nuU;
-	    Av += vGrr*(Dkn*Dkn);
+	    Av += vGrr*tmp;
 
 	    dfloat kGrr = gtmpkTau*nuK;
-	    Ak += kGrr*(Dkn*Dkn);
+	    Ak += kGrr*tmp;
 
 	    dfloat tauGrr = gtmpkTau*nuTau;
-	    Atau += tauGrr*(Dkn*Dkn);
+	    Atau += tauGrr*tmp;
           }
 
 
@@ -312,16 +327,18 @@
 	    dfloat gtmpv = wJ*(fac*sy*sy + sx*sx);
 	    dfloat gtmpkTau = wJ*(sx*sx+sy*sy);
 	    dfloat uGss = gtmpu*nuU;
-            Au += uGss*(Dkm*Dkm); // strided for gather
+
+	    dfloat tmp = Dkm*Dkm;
+            Au += uGss*tmp; // strided for gather
 	    
 	    dfloat vGss = gtmpv*nuU;
-	    Av += vGss*(Dkm*Dkm);
+	    Av += vGss*tmp;
 
 	    dfloat kGss = gtmpkTau*nuK;
-	    Ak += kGss*(Dkm*Dkm);
+	    Ak += kGss*tmp;
 
 	    dfloat tauGss = gtmpkTau*nuTau;
-	    Atau += tauGss*(Dkm*Dkm);
+	    Atau += tauGss*tmp;
           }
 
 	  // cross terms
@@ -344,16 +361,17 @@
 	    dfloat gtmpv = p_two*wJ*(fac*ry*sy + rx*sx);
 	    dfloat gtmpkTau = p_two*wJ*(rx*sx+sy*sy);
 	    dfloat uGrs = gtmpu*nuU;
-            Au += uGrs*(Dnn*Dmm); // strided for gather
+	    dfloat tmp = Dnn*Dmm;
+            Au += uGrs*tmp; // strided for gather
 	    
 	    dfloat vGrs = gtmpv*nuU;
-	    Av += vGrs*(Dnn*Dmm);
+	    Av += vGrs*tmp;
 
 	    dfloat kGrs = gtmpkTau*nuK;
-	    Ak += kGrs*(Dnn*Dmm);
+	    Ak += kGrs*tmp;
 
 	    dfloat tauGrs = gtmpkTau*nuTau;
-	    Atau += tauGrs*(Dnn*Dmm);
+	    Atau += tauGrs*tmp;
 	  }
 	  
 	  dfloat JW = vgeo[vbase + n + m*p_Nq + p_JWID*p_Np];

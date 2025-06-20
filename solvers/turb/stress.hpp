@@ -36,11 +36,13 @@ SOFTWARE.
 #include "linearSolver.hpp"
 #include "parAlmond.hpp"
 #include "ellipticPrecon.hpp"
+#include "ins.hpp"
 
 #define DINS LIBP_DIR"/solvers/turb/"
 
 using namespace libp;
 
+#if 0
 class stressSettings_t: public settings_t {
 public:
   stressSettings_t() = default;
@@ -53,6 +55,7 @@ public:
 void stressAddRunSettings(settings_t& settings);
 void stressAddSettings(settings_t& settings,
                          const std::string prefix="");
+#endif
 
 class stress_t: public solver_t {
 public:
@@ -104,17 +107,19 @@ public:
   
   memory<dfloat> nut;
   deviceMemory<dfloat> o_nut;
+
+  settings_t stressSettings;
   
   stress_t() = default;
   stress_t(platform_t &_platform, mesh_t &_mesh,
-	   settings_t& _settings, dfloat _viscosity, dfloat _lambda,
+	   insSettings_t& _insSettings, dfloat _viscosity, dfloat _lambda,
 	   const int _NBCTypes, const memory<int> _BCType) {
-    Setup(_platform, _mesh, _settings, _viscosity, _lambda, _NBCTypes, _BCType);
+    Setup(_platform, _mesh, _insSettings, _viscosity, _lambda, _NBCTypes, _BCType);
   }
 
   //setup
   void Setup(platform_t& _platform, mesh_t& _mesh,
-             settings_t& _settings, dfloat _viscosity, dfloat _lambda,
+             insSettings_t& _insSettings, dfloat _viscosity, dfloat _lambda,
              const int _NBCTypes, const memory<int> _BCType);
 
   void BoundarySetup();
