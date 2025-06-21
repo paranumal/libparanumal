@@ -39,7 +39,7 @@ void mesh_t::SurfaceGeometricFactorsTet3D(){
   SJID  = 3;
   IJID  = 4;
   IHID  = 5;
-  MAXHID  = 5;
+  MAXHID  = 6;
 
   props["defines/" "p_Nsgeo"]= Nsgeo;
   props["defines/" "p_NXID"]= NXID;
