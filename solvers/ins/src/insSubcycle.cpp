@@ -68,7 +68,7 @@ void subcycler_t::rhsf(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS, c
                            o_Ue);
 
   // finish exchange of Ue
-  vTraceHalo.ExchangeFinish(o_Ue, NVfields);
+  vTraceHalo.ExchangeFinish(o_Ue, 1);
 
   // (lumped) project Ue to C0
   //  ins->Project(o_Ue, mesh.dim);
