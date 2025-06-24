@@ -28,7 +28,7 @@ SOFTWARE.
 
 // 1. G*ML*S*GU = G*ML*U
 // 2. U = S*U
-void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
+void ins_t::MassSolve(deviceMemory<dfloat>& o_U, int clip){
 
   int Nfields = mesh.dim + 2; // include k-tau
   
@@ -75,8 +75,7 @@ void ins_t::MassSolve(deviceMemory<dfloat>& o_U){
 
   // scatter
   //  massSolver.ogsMasked.Scatter(o_U, o_GUH, Nfields1, ogs::NoTrans);
-
-  massSolver.massScatterKernel(mesh.Nelements, massSolver.o_GlobalToLocal, o_GUH, o_U);
+  massSolver.massScatterKernel(mesh.Nelements, clip,  massSolver.o_GlobalToLocal, o_GUH, o_U);
   
   o_GrhsU.free();
   o_GUH.free();

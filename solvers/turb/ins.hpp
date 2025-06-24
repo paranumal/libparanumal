@@ -205,7 +205,7 @@ public:
   void Report(dfloat time, int tstep);
 
   void PlotFields(memory<dfloat>& U, memory<dfloat>& P, memory<dfloat>& Vort, memory<dfloat>& Qfactor, std::string fileName);
-  void PlotFrame(memory<dfloat>& U, std::string fileName, int plotNfields);
+  void PlotFrame(memory<dfloat>& U, std::string fileName, int plotField, int plotNfields);
 
   dfloat MaxWaveSpeed(deviceMemory<dfloat>& o_U, const dfloat T);
 
@@ -241,7 +241,7 @@ public:
                      const dfloat gamma, const dfloat T, const dfloat dt);
   void StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
                      const dfloat gamma, const dfloat T);
-  void MassSolve(deviceMemory<dfloat>& o_U);
+  void MassSolve(deviceMemory<dfloat>& o_U, int clip);
 };
 
 #endif

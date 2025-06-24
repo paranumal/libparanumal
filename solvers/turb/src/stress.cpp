@@ -184,6 +184,7 @@ void stress_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 		    o_D,
 		    o_S,
 		    o_MM,
+		    o_stiffDiagonal,
 		    static_cast<double>(lambda),
 		    o_q,
 		    o_AqL);
@@ -203,6 +204,7 @@ void stress_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 		    o_D,
 		    o_S,
 		    o_MM,
+		    o_stiffDiagonal,
 		    static_cast<double>(lambda),
 		    o_q,
 		    o_AqL);
@@ -221,6 +223,7 @@ void stress_t::Operator(deviceMemory<double> &o_q, deviceMemory<double> &o_Aq){
 		    o_D,
 		    o_S,
 		    o_MM,
+		    o_stiffDiagonal,
 		    static_cast<double>(lambda),
 		    o_q,
 		    o_AqL);
@@ -273,6 +276,7 @@ void stress_t::Operator(deviceMemory<float> &o_q, deviceMemory<float> &o_Aq){
 			 o_D,
 			 o_S,
 			 o_MM,
+			 o_stiffDiagonal,
 			 static_cast<float>(lambda),
 			 o_q,
 			 o_AqL);
@@ -364,10 +368,8 @@ void stress_t::BuildOperatorDiagonal(memory<dfloat>& diagA){
 
 void stress_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
 
-  deviceMemory<dfloat> o_diagAL =
-    platform.reserve<dfloat>(mesh.Nelements*Nfields*mesh.Np);
-  deviceMemory<dfloat> o_diagA =
-    platform.reserve<dfloat>(Ndofs);
+  deviceMemory<dfloat> o_diagAL = platform.reserve<dfloat>(mesh.Nelements*Nfields*mesh.Np);
+  deviceMemory<dfloat> o_diagA  = platform.reserve<dfloat>(Ndofs);
   
   dfloat neumannBoost = (allNeumann) ? allNeumannPenalty*
     allNeumannScale*allNeumannScale: 0;
@@ -382,8 +384,9 @@ void stress_t::BuildOperatorDiagonal(deviceMemory<pfloat> &o_invDiagA ){
 			      mesh.o_S,
 			      mesh.o_MM,
 			      lambda,
+			      o_stiffDiagonal,
 			      o_diagAL);
-  
+
   ogsMasked.Gather(o_diagA, o_diagAL, Nfields, ogs::Add, ogs::Trans);
 
   reciprocalKernel(Ndofs, o_diagA, o_invDiagA);
@@ -618,6 +621,7 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
   Ndofs = ogsMasked.Ngather*Nfields;
   Nhalo = gHalo.Nhalo*Nfields;
 
+  memory<dfloat> stiffDiagonal(mesh.Np*mesh.Nelements*2);
   nut.malloc(mesh.Np*mesh.Nelements);
   for(int e=0;e<mesh.Nelements;++e){
     for(int n=0;n<mesh.Np;++n){
@@ -625,9 +629,12 @@ void stress_t::Setup(platform_t& _platform, mesh_t& _mesh,
       dfloat xn = mesh.x[id];
       dfloat yn = mesh.y[id];
       nut[id] = 0; // viscosity; //  + 0.5*(1+tanh(40.*(xn-1.2)))*(0.01/viscosity);  // 1 + excess scaled by 1/viscosity
+      stiffDiagonal[e*mesh.Np*2+n] = 0;
+      stiffDiagonal[e*mesh.Np*2+n + mesh.Np] = 0;
     }
   }
   o_nut  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements, nut);
+  o_stiffDiagonal  = platform.malloc<dfloat>(mesh.Np*mesh.Nelements*2, stiffDiagonal); // diagonal source terms (wrong size for tri/tet cubature)
 
   kernelName = "stressBuildOperatorDiagonal" + suffix;
   buildOperatorDiagonalKernel = platform.buildKernel(fileName, kernelName,

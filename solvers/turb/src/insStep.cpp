@@ -105,7 +105,9 @@ void ins_t::rhs_imex_invg(deviceMemory<dfloat>& o_RHS, deviceMemory<dfloat>& o_U
 
   // project U to C0 (should be equivalent to also projecting Ue)
   // (note the projection uses pressure gather (which neglects outflow only)
-  MassSolve(o_U);
+  // (clips k/tau)
+  int clip = 1;
+  MassSolve(o_U, clip);
 
   if (mesh.rank==0 && mesh.dim==2) {
     printf("\rT: %e, Solver iterations: U - %3d, V - %3d, P - %3d", T, NiterU, NiterV, NiterP); fflush(stdout);

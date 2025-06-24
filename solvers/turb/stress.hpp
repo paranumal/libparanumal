@@ -107,6 +107,7 @@ public:
   
   memory<dfloat> nut;
   deviceMemory<dfloat> o_nut;
+  deviceMemory<dfloat> o_stiffDiagonal;
 
   settings_t stressSettings;
   

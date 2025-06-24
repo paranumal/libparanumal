@@ -39,7 +39,7 @@ insSettings_t::insSettings_t(comm_t& _comm):
              "viscosity");
   
   newSetting("K-TAU ALPHA",
-	     "0.56",
+	     "0.52",
              "k-tau: production rate constant for tau");
 
   newSetting("K-TAU BETA",
@@ -51,12 +51,12 @@ insSettings_t::insSettings_t(comm_t& _comm):
              "k-tau: relaxation constant for k");
 
   newSetting("K-TAU SIGMAK",
-             "1.6666666666",
-             "k-tau: diffusion scaling parameter for k");
+             "0.6",
+             "k-tau: reciprocal diffusion scaling parameter for k");
   
   newSetting("K-TAU SIGMATAU",
-	     "2.0",
-             "k-tau: diffusion scaling parameter for tau");
+	     "0.5",
+             "k-tau: reciprocal diffusion scaling parameter for tau");
 
   newSetting("ADVECTION TYPE",
              "COLLOCATION",

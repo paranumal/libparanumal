@@ -123,7 +123,10 @@ SOFTWARE.
   }
 }
 
+#define mymax(a,b) ( ( (a) > (b) ) ? (a) : (b) )
+
 @kernel void massScatterQuad2D(const dlong   Nelements,
+			       const int clip,
 			      @restrict const  dlong   *  GlobalToLocal,
 			      @restrict dfloat *  UG,
 			      @restrict dfloat *  UL){
@@ -137,8 +140,26 @@ SOFTWARE.
       const dlong base = n + e*p_Np;
       const dlong id = p_NVfields*GlobalToLocal[base];
       const dlong idL = e*p_Np*p_NVfields+n;
-      for(int fld=0;fld<p_NVfields;++fld){
-	UL[idL+fld*p_Np] = UG[id+fld];
+
+      // velocity
+      dfloat u = UG[id+0];
+      dfloat v = UG[id+1];
+
+      UL[idL+0*p_Np] = u;
+      UL[idL+1*p_Np] = v;
+      
+      if(p_NVfields>2){
+	// clip to positive
+	dfloat k = UG[id+2];
+	dfloat tau = UG[id+3];
+
+	if(clip==1){
+	  k   = mymax(k, 0.01*fabs(k));
+	  tau = mymax(tau, 0.01*fabs(tau));
+	}
+	
+	UL[idL+2*p_Np] = k;
+	UL[idL+3*p_Np] = tau;
       }
     }
   }

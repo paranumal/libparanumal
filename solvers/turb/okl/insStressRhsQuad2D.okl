@@ -24,8 +24,26 @@
 
 */
 
-#define p_one ((dfloat)1.)
-#define p_two ((dfloat)2.)
+//#define p_tiny  ((dfloat)1e-8)
+#define p_half  ((dfloat)0.5)
+#define p_one   ((dfloat)1.)
+#define p_two   ((dfloat)2.)
+#define p_eight ((dfloat)8.)
+
+#define p_sigma_k 0.6   // sigma_k
+#define p_sigma_tau 0.5   // sigma_tau
+#define p_beta0 0.0708    // beta0
+#define p_kappa 0.41      // kappa
+#define p_betastar 0.09   // betastar
+#define p_sigd_min 0.0    // sigd_min
+#define p_sigd_max 0.125 // sigd_max
+#define p_fb_c1st 400.0   // fb_c1st
+#define p_fb_c2st 400.0   // fb_c2st
+#define p_alpha 0.52    // alpha
+#define p_tiny 1e-8       // TINY
+
+#define mymax(a,b) ( ( (a) > (b) ) ? (a) : (b) )
+#define mymin(a,b) ( ( (a) < (b) ) ? (a) : (b) )
 
 // need to add k, tau here
 
@@ -51,15 +69,31 @@
       insVelocityDirichletConditions2D(bc, ndotU, nu, time, x[idM], y[idM], nx, ny, QM, QP); \
       insVelocityNeumannConditions2D(bc, nu, time, x[idM], y[idM], nx, ny, dQdxM, dQdyM, dQdxP, dQdyP); \
     }									\
-    s_u  [j][i]  = QP[0];						\
-    s_v  [j][i]  = QP[1];						\
-    s_k  [j][i]  = QP[2];						\
-    s_tau[j][i]  = QP[3];						\
+    s_ubc  [j][i]  = QP[0];						\
+    s_vbc  [j][i]  = QP[1];						\
+    s_kbc  [j][i]  = QP[2];						\
+    s_taubc[j][i]  = QP[3];						\
     s_ndu[j][i] -= WsJ*nuU*(p_two*nx*dQdxP[0] + ny*(dQdyP[0]+dQdxP[1])); \
     s_ndv[j][i] -= WsJ*nuU*(p_two*ny*dQdyP[1] + nx*(dQdyP[0]+dQdxP[1])); \
     s_ndk[j][i] -= WsJ*nuK*(nx*dQdxP[2] + ny*dQdyP[2]);			\
     s_ndtau[j][i] -= WsJ*nuTau*(nx*dQdxP[3] + ny*dQdxP[3]);		\
   }
+
+/*
+
+
+  k-tau RANS closure :
+
+  - Kalitzin, G., Gould, A.R.B., and Benton, J.J.,“Application of Two-Equation Turbulence Mod-els in Aircraft Design”, AIAA Paper 96-0327, 1996.
+
+  - J.C. Kok and S.P. Spekreijse, Efficient and accurate implementation of the k-omega turbulence model in the NLR multi-block Navier-Stokes system (https://reports.nlr.nl/server/api/core/bitstreams/335b0ad2-5afd-41e8-a01d-e7379420eabe/content)
+
+  Following details from Nekrs: 
+  - https://nekrsdoc.readthedocs.io/en/latest/theory.html
+  - https://github.com/Nek5000/nekRS/blob/next/src/nrs/plugins/kernels/RANSktau.okl
+
+*/
+
 
 
 // compute RHS = MM*RHS/nu + BCdata
@@ -88,13 +122,20 @@
 				@restrict const dfloat *  U,
 				@restrict const dfloat *  RHS,
 				@restrict       dfloat *  UH,
+				@restrict       dfloat *  stiffDiagonal,
 				@restrict       dfloat *  rhsU){
 			       
   for(dlong e=0;e<Nelements;e++;@outer(0)){
+  // overboard on shared memory
     @shared dfloat s_u[p_Nq][p_Nq];
     @shared dfloat s_v[p_Nq][p_Nq];
     @shared dfloat s_k[p_Nq][p_Nq];
     @shared dfloat s_tau[p_Nq][p_Nq];
+    @shared dfloat s_sqrtTau[p_Nq][p_Nq];
+    @shared dfloat s_ubc[p_Nq][p_Nq];
+    @shared dfloat s_vbc[p_Nq][p_Nq];
+    @shared dfloat s_kbc[p_Nq][p_Nq];
+    @shared dfloat s_taubc[p_Nq][p_Nq];
     @shared dfloat s_tmpur[p_Nq][p_Nq];
     @shared dfloat s_tmpus[p_Nq][p_Nq];
     @shared dfloat s_tmpvr[p_Nq][p_Nq];
@@ -117,19 +158,32 @@
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
-        s_u[j][i] = 0.;
-        s_v[j][i] = 0.;
-	s_k[j][i] = 0.;
-        s_tau[j][i] = 0.;
+        s_ubc[j][i] = 0.;
+        s_vbc[j][i] = 0.;
+	s_kbc[j][i] = 0.;
+        s_taubc[j][i] = 0.;
 
         s_ndu[j][i] = 0.;
         s_ndv[j][i] = 0.;
 	s_ndk[j][i] = 0.;
         s_ndtau[j][i] = 0.;
         s_DT[j][i] = DT[j*p_Nq+i];
+
+	const dlong id = e*p_Np*p_NVfields + j*p_Nq + i;
+	s_u[j][i] = U[id+0*p_Np];
+	s_v[j][i] = U[id+1*p_Np];
+
+	dfloat k = U[id+2*p_Np];
+	dfloat tau = U[id+3*p_Np];
+	
+	if(k<0) printf("k=%g\n", k);
+	if(tau<0) printf("tau=%g\n", tau);
+
+	s_k[j][i] = fabs(k);
+	s_tau[j][i] = fabs(tau);
+	s_sqrtTau[j][i] = sqrt(fabs(tau));
       }
     }
-
 
     // face 0 & 2
     for(int i=0;i<p_Nq;++i;@inner(0)){
@@ -150,7 +204,6 @@
       surfaceTerms1(sk3,3,0     ,j);
     }
 
-
     // loop over slabs
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
@@ -160,71 +213,151 @@
         dfloat vr = 0.f, vs = 0.f;
 	dfloat kr = 0.f, ks = 0.f;
         dfloat taur = 0.f, taus = 0.f;
+	dfloat sqrtTaur = 0.f, sqrtTaus = 0.f;
 
+        dfloat ubcr = 0.f, ubcs = 0.f;
+        dfloat vbcr = 0.f, vbcs = 0.f;
+	dfloat kbcr = 0.f, kbcs = 0.f;
+        dfloat taubcr = 0.f, taubcs = 0.f;
+	
 #pragma unroll p_Nq
 	for(int n=0; n<p_Nq; ++n){
 	  dfloat Din = s_DT[i][n]; 
+	  ubcr += Din*s_ubc[j][n];
+	  vbcr += Din*s_vbc[j][n];
+	  kbcr += Din*s_kbc[j][n];
+	  taubcr += Din*s_taubc[j][n];
 	  ur += Din*s_u[j][n];
 	  vr += Din*s_v[j][n];
 	  kr += Din*s_k[j][n];
 	  taur += Din*s_tau[j][n];
+	  sqrtTaur += Din*s_sqrtTau[j][n];
 	}
 
 #pragma unroll p_Nq
 	for(int n=0; n<p_Nq; ++n){
 	  dfloat Djn = s_DT[j][n];
+	  ubcs += Djn*s_ubc[n][i];
+	  vbcs += Djn*s_vbc[n][i];
+	  kbcs += Djn*s_kbc[n][i];
+	  taubcs += Djn*s_taubc[n][i];
+
 	  us += Djn*s_u[n][i];
 	  vs += Djn*s_v[n][i];
 	  ks += Djn*s_k[n][i];
 	  taus += Djn*s_tau[n][i];
+	  sqrtTaus += Djn*s_sqrtTau[n][i];
 	}
 
-        r_Au[j] = r_GwJ*lambda*s_u[j][i];
-        r_Av[j] = r_GwJ*lambda*s_v[j][i];
-	r_Ak[j] = r_GwJ*lambda*s_k[j][i];
-        r_Atau[j] = r_GwJ*lambda*s_tau[j][i];
-
         const dlong base = e*p_Nvgeo*p_Np + j*p_Nq + i;
-
 	const dfloat rx = vgeo[base + p_RXID*p_Np];
 	const dfloat ry = vgeo[base + p_RYID*p_Np];
 	const dfloat sx = vgeo[base + p_SXID*p_Np];
 	const dfloat sy = vgeo[base + p_SYID*p_Np];
+
+	const dfloat ux = rx*ur + sx*us;
+	const dfloat uy = ry*ur + sy*us;
+	const dfloat vx = rx*vr + sx*vs;
+	const dfloat vy = ry*vr + sy*vs;
+	const dfloat kx = rx*kr + sx*ks;
+	const dfloat ky = ry*kr + sy*ks;
+	const dfloat taux = rx*taur + sx*taus;
+	const dfloat tauy = ry*taur + sy*taus;
+
+	const dfloat sqrtTaux = rx*sqrtTaur + sx*sqrtTaus;
+	const dfloat sqrtTauy = ry*sqrtTaur + sy*sqrtTaus;
+	
+	// save diagonal weight terms
+	const dfloat gradkDotGradTau = -(kx * taux + ky * tauy);
+	const dfloat gradTauSqrt2 = sqrtTaux*sqrtTaux + sqrtTauy*sqrtTauy;
 	
 	const dfloat r_nut = nut[e*p_Np+j*p_Nq+i];
 	dfloat nuU   = p_one + r_nut*p_invNu;
 	dfloat nuK   = p_one + p_invSigmaK*(r_nut*p_invNu);
 	dfloat nuTau = p_one + p_invSigmaTau*(r_nut*p_invNu);
 	
-	dfloat ux = rx*ur + sx*us;
-	dfloat uy = ry*ur + sy*us;
-	dfloat vx = rx*vr + sx*vs;
-	dfloat vy = ry*vr + sy*vs;
+	dfloat ubcx = rx*ubcr + sx*ubcs;
+	dfloat ubcy = ry*ubcr + sy*ubcs;
+	dfloat vbcx = rx*vbcr + sx*vbcs;
+	dfloat vbcy = ry*vbcr + sy*vbcs;
+	dfloat kbcx = rx*kbcr + sx*kbcs;
+	dfloat kbcy = ry*kbcr + sy*kbcs;
+	dfloat taubcx = rx*taubcr + sx*taubcs;
+	dfloat taubcy = ry*taubcr + sy*taubcs;
 
-	dfloat kx = rx*kr + sx*ks;
-	dfloat ky = ry*kr + sy*ks;
-	dfloat taux = rx*taur + sx*taus;
-	dfloat tauy = ry*taur + sy*taus;
+	s_tmpur[j][i] = r_GwJ*nuU*(rx*p_two*ubcx + ry*(ubcy+vbcx));
+	s_tmpus[j][i] = r_GwJ*nuU*(sx*p_two*ubcx + sy*(ubcy+vbcx));
+	s_tmpvr[j][i] = r_GwJ*nuU*(rx*(ubcy+vbcx) + ry*p_two*vbcy);
+	s_tmpvs[j][i] = r_GwJ*nuU*(sx*(ubcy+vbcx) + sy*p_two*vbcy);
 
-	s_tmpur[j][i] = r_GwJ*nuU*(rx*p_two*ux + ry*(uy+vx));
-	s_tmpus[j][i] = r_GwJ*nuU*(sx*p_two*ux + sy*(uy+vx));
-	s_tmpvr[j][i] = r_GwJ*nuU*(rx*(uy+vx) + ry*p_two*vy);
-	s_tmpvs[j][i] = r_GwJ*nuU*(sx*(uy+vx) + sy*p_two*vy);
+	s_tmpkr[j][i] = r_GwJ*nuK*(rx*kbcx + ry*kbcy);
+	s_tmpks[j][i] = r_GwJ*nuK*(sx*kbcx + sy*kbcy);
+	s_tmptaur[j][i] = r_GwJ*nuTau*(rx*taubcx + ry*taubcy);
+	s_tmptaus[j][i] = r_GwJ*nuTau*(sx*taubcx + sy*taubcy);
 
-	s_tmpkr[j][i] = r_GwJ*nuK*(rx*kx + ry*ky);
-	s_tmpks[j][i] = r_GwJ*nuK*(sx*kx + sy*ky);
-	s_tmptaur[j][i] = r_GwJ*nuTau*(rx*taux + ry*tauy);
-	s_tmptaus[j][i] = r_GwJ*nuTau*(sx*taux + sy*tauy);
+        r_Au[j] = r_GwJ*lambda*s_ubc[j][i];
+        r_Av[j] = r_GwJ*lambda*s_vbc[j][i];
+	r_Ak[j] = r_GwJ*lambda*s_kbc[j][i];
+        r_Atau[j] = r_GwJ*lambda*s_taubc[j][i];
+
+	dfloat S00 = ux;
+	dfloat S01 = p_half*(uy+vx);
+	dfloat S11 = vy;
+	dfloat S = p_two*(S00*S00+p_two*S01*S01+S11*S11);
+	
+	const dfloat tau = s_tau[j][i];
+	dfloat invTau = (tau>0) ?  1.0 / (tau + p_tiny) : 0.0;
+	
+	dfloat sigd = p_sigd_min;
+	dfloat f_betastar = 1.0;
+	if (gradkDotGradTau > 0) {
+	  const dfloat xk3 = gradkDotGradTau * gradkDotGradTau * tau * tau;
+	  sigd = p_sigd_max;
+	  f_betastar = (1.0 + p_fb_c1st * xk3) / (1.0 + p_fb_c2st * xk3);
+	}
+	
+	// compute source term for k
+	const dfloat Y_k   = p_betastar * f_betastar * invTau;
+	const dfloat kSrc  = mymin(r_nut * S, 10.0f * Y_k * s_k[j][i]); 
+	const dfloat kDiag = Y_k;
+	
+	// compute source term for tau
+	const dfloat Y_w  = -p_beta0; 
+	const dfloat S_w0 = -sigd *gradkDotGradTau;
+	const dfloat G_wp = p_alpha * tau * S;
+	
+	const dfloat tau_max = (8.0/3.0) * p_beta0;
+	const dfloat S_tau   = mymin(8.0f * (1./p_nuInv) * gradTauSqrt2, tau_max);
+	const dfloat S_taup  = 8.0 * s_k[j][i] * gradTauSqrt2 * p_sigma_tau;	  
+	
+	dfloat tauSrc  = -Y_w; // tauSrc = beta_0
+	dfloat tauDiag = G_wp - S_w0 + S_taup; // alpha*tau*S + sigd*gradk.gradtau + 8*k*|grad \sqrt{tau}|^2*sigma_tau 
+	
+	// basically adding and subtracting to dominate ??
+	if(tau>= p_tiny){
+	  tauSrc  -= S_tau; // tauSrc = beta_0 - 8*|grad sqrt{tau}|^2
+	  tauDiag += S_tau*invTau; // 
+	}
+
+	// check all signs
+	r_Ak[j]   -= (p_invNu*r_GwJ)*kSrc;
+	r_Atau[j] -= (p_invNu*r_GwJ)*tauSrc;
+
+	// check signs
+	stiffDiagonal[e*p_Np*2 + j*p_Nq + i + 0*p_Np] = (p_invNu*r_GwJ)*kDiag;
+	stiffDiagonal[e*p_Np*2 + j*p_Nq + i + 1*p_Np] = (p_invNu*r_GwJ)*tauDiag;
+	
       }
     }
 
-
     for(int i=0;i<p_Nq;++i;@inner(0)){
       for(int j=0;j<p_Nq;++j){
+	
         dfloat tmpu = 0.f;
         dfloat tmpv = 0.f;
 	dfloat tmpk = 0.f;
         dfloat tmptau = 0.f;
+
 #pragma unroll p_Nq
 	for(int n=0;n<p_Nq;++n) {
 	  dfloat Dni = s_DT[n][i];
@@ -241,13 +374,14 @@
 	  tmpk += Dnj*s_tmpks[n][i];
 	  tmptau += Dnj*s_tmptaus[n][i];
 	}
-	
+
 	r_Au[j] += tmpu;
         r_Av[j] += tmpv;
 	r_Ak[j] += tmpk;
         r_Atau[j] += tmptau;
+
       }
-      
+	
       for(int j=0;j<p_Nq;++j){
         const dfloat JW = wJ[i + j*p_Nq + e*p_Np];
         const dlong id = e*p_Np + j*p_Nq + i;
@@ -333,8 +467,14 @@
         const dlong iid = e*p_Np*p_NVfields+j*p_Nq+i;
         U[iid+0*p_Np] = UH[p_NVfields*id+0];
         U[iid+1*p_Np] = UH[p_NVfields*id+1];
-	U[iid+2*p_Np] = UH[p_NVfields*id+2];
-        U[iid+3*p_Np] = UH[p_NVfields*id+3];
+
+	// clip k and tau
+	dfloat ke = UH[p_NVfields*id+2];
+	dfloat taue = UH[p_NVfields*id+3];
+	ke =   mymax(ke, 0.01*fabs(ke));
+	taue = mymax(taue, 0.01*fabs(taue));
+	U[iid+2*p_Np] = ke;
+        U[iid+3*p_Np] = taue;
       }
     }
   }

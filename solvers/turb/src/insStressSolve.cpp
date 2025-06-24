@@ -33,39 +33,25 @@ SOFTWARE.
 void ins_t::StressSolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS,
 			const dfloat gamma, const dfloat T) {
 
-  dlong Ntotal = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np*NVfields;
+  dlong NperField = (mesh.Nelements+mesh.totalHaloPairs)*mesh.Np;
+  dlong Ntotal = NperField*mesh.Np*NVfields;
 
   deviceMemory<dfloat> o_UH = platform.reserve<dfloat>(Ntotal);
   deviceMemory<dfloat> o_rhsU = platform.reserve<dfloat>(Ntotal);
+  deviceMemory<dfloat> o_stiffDiagonalU = platform.reserve<dfloat>(2*NperField);
+
+  // need to update turbulent viscosity
+  stressUpdateTurbulentViscosityKernel(mesh.Nelements, o_U, stressSolver.o_nut);
 
   // compute RHS = MM*RHS/nu + BCdata
   // and split fields to separate arrays
   dfloat nuInv = 1./nu;
-  stressRhsKernel(mesh.Nelements,
-		  mesh.o_wJ,
-		  mesh.o_vgeo,
-		  mesh.o_sgeo,
-		  mesh.o_ggeo,
-		  mesh.o_S,
-		  mesh.o_D,
-		  mesh.o_LIFT,
-		  mesh.o_MM,
-		  mesh.o_sM,
-		  mesh.o_vmapM,
-		  mesh.o_EToB,
-		  mesh.o_mapB,
-		  vTau,
-		  T,
-		  mesh.o_x,
-		  mesh.o_y,
-		  mesh.o_z,
-		  gamma/nu,
-		  nuInv,
-		  stressSolver.o_nut,
-		  o_U,
-		  o_RHS,
-		  o_UH,
-		  o_rhsU);
+  stressRhsKernel(mesh.Nelements,  mesh.o_wJ, mesh.o_vgeo, mesh.o_sgeo,  mesh.o_ggeo,  mesh.o_S, mesh.o_D,
+		  mesh.o_LIFT, mesh.o_MM, mesh.o_sM, mesh.o_vmapM, mesh.o_EToB, mesh.o_mapB, vTau, T,
+		  mesh.o_x, mesh.o_y, mesh.o_z,  gamma/nu, nuInv, stressSolver.o_nut, o_U, o_RHS, o_UH,  stressSolver.o_stiffDiagonal, o_rhsU);
+
+  // update Jacobi diagonal
+  stressSolver.precon.Update();
   
   int maxIter = 5000;
   int verbose = false;

@@ -95,7 +95,7 @@ static bool WritePNG(const char* filename, int width, int height, unsigned char*
 }
 
 // New member function to save a PNG image instead of VTU output.
-void ins_t::PlotFrame(memory<dfloat>& Q, std::string fileName, int plotNfields) {
+void ins_t::PlotFrame(memory<dfloat>& Q, std::string fileName, int plotField, int plotNfields) {
   //--- Step 1. Interpolate plot node coordinates and Q0 for each element ---
   // (We assume here you wish to visualize the first field: Q0)
   //  std::vector<Point2D> globalPoints;
@@ -121,7 +121,7 @@ void ins_t::PlotFrame(memory<dfloat>& Q, std::string fileName, int plotNfields) 
     mesh.PlotInterp(mesh.y + e * mesh.Np, Iy, scratch);
     // Interpolate Q field (assuming field index 0: Q0)
     //    mesh.PlotInterp(Q + e * mesh.Np * Nfields + fld * mesh.Np, Iq[fld], scratch);
-    mesh.PlotInterp(Q + e * mesh.Np * plotNfields, Iq, scratch);
+    mesh.PlotInterp(Q + plotField*mesh.Np + e * mesh.Np * plotNfields, Iq, scratch);
     
     for (int n = 0; n < mesh.plotNp; ++n) {
       globalPoints[e*mesh.plotNp + n] = {static_cast<dfloat>(Ix[n]),

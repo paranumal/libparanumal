@@ -44,6 +44,7 @@
                                    @restrict const  dfloat *  DT,
                                    @restrict const  dfloat *  S,
                                    @restrict const  dfloat *  MM,
+				   @restrict const  dfloat *  stiffDiagonal,	
                                    const dfloat   lambda,
                                    @restrict const  dfloat *  q,
                                    @restrict dfloat *  Aq){
@@ -135,6 +136,13 @@
       r_Aq[2] = r_wJ*lambda*s_k[j][i];
       r_Aq[3] = r_wJ*lambda*s_tau[j][i];
 
+      //      add k-tau penalties here
+      dfloat stiffDiagK = stiffDiagonal[element*p_Np*2 + j*p_Nq+i];
+      dfloat stiffDiagTau = stiffDiagonal[element*p_Np*2 + j*p_Nq+i + p_Np];
+
+      r_Aq[2] += stiffDiagK*s_k[j][i];
+      r_Aq[3] += stiffDiagTau*s_tau[j][i];
+      
       dfloat tmpur = rx*(p_two*ux) + ry*(uy+vx);
       dfloat tmpus = sx*(p_two*ux) + sy*(uy+vx);
       dfloat tmpvr = rx*(uy+vx) + ry*(p_two*vy);
@@ -242,6 +250,7 @@
 					       @restrict const  dfloat *  S,
 					       @restrict const  dfloat *  MM,
 					       const dfloat   lambda,
+					       @restrict dfloat *stiffDiagonal,
 					       @restrict dfloat * A){
 
 
@@ -396,7 +405,10 @@
 	    Atau += neumannBoost;
 	  }
 	}
-      
+
+	Ak += stiffDiagonal[e*p_Np*2+m*p_Nq+n + 0*p_Np];
+	Atau += stiffDiagonal[e*p_Np*2+m*p_Nq+n + 1*p_Np];
+	
 	A[p_Nfields*nid+0] = Au;
 	A[p_Nfields*nid+1] = Av;
 	A[p_Nfields*nid+2] = Ak;

@@ -28,10 +28,8 @@
 #define p_vbar 0.0
 #define p_pbar 1.0
 
-#define p_kbar 0.0
-#define p_taubar 0.0
-
-#define copysign(a) ( ((a)<0) ? -1.f : 1.f )
+#define p_kbar (1.e-6)
+#define p_taubar (1.e-6)
 
 // Initial conditions
 #define insInitialConditions2D(nu,t,x,y,u,v,k,tau,p)	\
@@ -51,7 +49,7 @@
     uB[0] = 0.f;							\
     uB[1] = 0.f;							\
     uB[2] = 0.f;							\
-    uB[3] = 0.f;							\
+    uB[3] = p_taubar;							\
   } else if(bc==2){ /* inflow */					\
     uB[0] = p_ubar;							\
     uB[1] = p_vbar;							\

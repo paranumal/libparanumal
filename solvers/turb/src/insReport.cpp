@@ -52,7 +52,8 @@ void ins_t::Report(dfloat time, int tstep){
     //    deviceMemory<dfloat> o_Qfactor = platform.reserve<dfloat>(NVfields*mesh.Nelements*mesh.Np);
     //    qfactorKernel(mesh.Nelements, mesh.o_vgeo, mesh.o_D, o_u, o_Qfactor);
 
-    MassSolve(o_Vort);
+    int clip=0;
+    MassSolve(o_Vort, clip);
     //    printf("MASS SOLVE: o_Qfactor\n");
     //    MassSolve(o_Qfactor);
     
@@ -70,7 +71,7 @@ void ins_t::Report(dfloat time, int tstep){
       std::string name;
       settings.getSetting("OUTPUT FILE NAME", name);
       char fname[BUFSIZ];
-      sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame++);
+      sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, frame);
       
       PlotFields(u, p, Vort, Qfactor, std::string(fname));
     }
@@ -81,12 +82,15 @@ void ins_t::Report(dfloat time, int tstep){
       
       // THIS plots the data as png
       char fname[BUFSIZ];
-      sprintf(fname, "%s_%04d_%04d.png", name.c_str(), mesh.rank, frame++);
+      sprintf(fname, "%s_%04d_%04d.png", name.c_str(), mesh.rank, frame);
       
       std::string sfname(fname);
       
-      PlotFrame(Vort, sfname, NVfields);
+      PlotFrame(Vort, sfname, 0, NVfields);
+      //      PlotFrame(u, sfname, 2, NVfields);// 0=u, 1=v, 2=k, 3=tau
     }
+
+    ++frame;
     
   }
 }
