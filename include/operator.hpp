@@ -40,6 +40,9 @@ public:
   virtual void Operator(deviceMemory<float> &o_r, deviceMemory<float> &o_Mr) {
     LIBP_FORCE_ABORT("Operator not implemented in this object: float");
   };
+  virtual void Update(){
+    LIBP_FORCE_ABORT("Update not implemented in this object");
+  };
 };
 
 } //namespace libp

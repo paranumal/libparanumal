@@ -40,6 +40,12 @@ class precon_t: public operator_t {
     precon->Operator(o_r, o_Mr);
   }
 
+  void Update(){
+    assertInitialized();
+    precon->Update();
+  }
+
+  
   /*Generic setup. Create a Precon object and wrap it in a shared_ptr*/
   template<class Precon, class... Args>
   void Setup(Args&& ... args) {

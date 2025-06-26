@@ -109,7 +109,7 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
   }
 
   if (verbose&&(rank==0))
-    printf("PCG: initial res norm %12.12f \n", sqrt(rdotr0));
+    printf("PCG: initial res norm %12.12f (from %12.12f)\n", sqrt(rdotr0), rdotr0);
 
   int iter;
   for(iter=0;iter<MAXIT;++iter){
@@ -120,8 +120,10 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
       break;
     }
 
+    //    int flag = settings.compareSetting("PRECONDITIONER", "JACOBI");
+    constexpr int pfloatFlag = sizeof(pfloat)==sizeof(T);
     // z = Precon^{-1} r
-    if constexpr (sizeof(pfloat)==sizeof(T)){
+    if (pfloatFlag){
       precon.Operator(o_r, o_z);
     } else {
       linAlg.d2p(N, o_r, o_pfloat_r);
@@ -154,12 +156,15 @@ int pcg<T>::Solve(operator_t& linearOperator, operator_t& precon,
     pAp =  linAlg.innerProd(N, o_p, o_Ap, comm);
 
     alpha = rdotz1/pAp;
-
+    
     //  x <= x + alpha*p
     //  r <= r - alpha*A*p
     //  dot(r,r)
     rdotr0 = UpdatePCG(alpha, o_p, o_Ap, o_x, o_r);
 
+    //    printf("iter: %d, rdotr0: %g, beta: %g, rdotz1: %g, rdotz2: %g => alpha: %g, pAp: %g\n",
+    //	   iter, rdotr0, beta, rdotz1, rdotz2, alpha, pAp);
+    
     if (verbose&&(rank==0)) {
       if(rdotr0<0)
         printf("WARNING CG: rdotr = %17.15lf\n", rdotr0);
