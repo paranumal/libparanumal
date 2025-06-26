@@ -80,8 +80,6 @@ void ins_t::VelocitySolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS
   int verbose = 0;
 
   uSolver.lambda = gamma/nu;
-  vSolver.lambda = gamma/nu;
-  wSolver.lambda = gamma/nu;
 
   //  Solve lambda*U - Laplacian*U = rhs
   if (vDisc_c0){
@@ -94,24 +92,6 @@ void ins_t::VelocitySolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS
     NiterU = uSolver.Solve(uLinearSolver, o_GUH, o_GrhsU, velTOL, maxIter, verbose);
     uSolver.ogsMasked.Scatter(o_UH, o_GUH, 1, ogs::NoTrans);
     o_GUH.free(); o_GrhsU.free();
-
-#if 0
-    deviceMemory<dfloat> o_GrhsV = platform.reserve<dfloat>(vSolver.Ndofs+vSolver.Nhalo);
-    deviceMemory<dfloat> o_GVH   = platform.reserve<dfloat>(vSolver.Ndofs+vSolver.Nhalo);
-    vSolver.ogsMasked.Gather(o_GrhsV, o_rhsV, 1, ogs::Add, ogs::Trans);
-    NiterV = vSolver.Solve(vLinearSolver, o_GVH, o_GrhsV, velTOL, maxIter, verbose);
-    vSolver.ogsMasked.Scatter(o_VH, o_GVH, 1, ogs::NoTrans);
-    o_GVH.free(); o_GrhsV.free();
-
-    if (mesh.dim==3) {
-      deviceMemory<dfloat> o_GrhsW = platform.reserve<dfloat>(wSolver.Ndofs+wSolver.Nhalo);
-      deviceMemory<dfloat> o_GWH   = platform.reserve<dfloat>(wSolver.Ndofs+wSolver.Nhalo);
-      wSolver.ogsMasked.Gather(o_GrhsW, o_rhsW, 1, ogs::Add, ogs::Trans);
-      NiterW = wSolver.Solve(wLinearSolver, o_GWH, o_GrhsW, velTOL, maxIter, verbose);
-      wSolver.ogsMasked.Scatter(o_WH, o_GWH, 1, ogs::NoTrans);
-      o_GWH.free(); o_GrhsW.free();
-    }
-#else
 
     //    printf("SOLVING V *********************\n");
     deviceMemory<dfloat> o_GrhsV = platform.reserve<dfloat>(uSolver.Ndofs+uSolver.Nhalo);
@@ -130,14 +110,11 @@ void ins_t::VelocitySolve(deviceMemory<dfloat>& o_U, deviceMemory<dfloat>& o_RHS
       uSolver.ogsMasked.Scatter(o_WH, o_GWH, 1, ogs::NoTrans);
       o_GWH.free(); o_GrhsW.free();
     }
-
-    
-#endif
   } else {
     NiterU = uSolver.Solve(uLinearSolver, o_UH, o_rhsU, velTOL, maxIter, verbose);
-    NiterV = vSolver.Solve(vLinearSolver, o_VH, o_rhsV, velTOL, maxIter, verbose);
+    NiterV = uSolver.Solve(uLinearSolver, o_VH, o_rhsV, velTOL, maxIter, verbose);
     if (mesh.dim==3)
-      NiterW = wSolver.Solve(wLinearSolver, o_WH, o_rhsW, velTOL, maxIter, verbose);
+      NiterW = uSolver.Solve(uLinearSolver, o_WH, o_rhsW, velTOL, maxIter, verbose);
   }
 
   // merge arrays back, and enter BCs if C0

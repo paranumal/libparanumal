@@ -765,28 +765,20 @@ void mass_t::Setup(platform_t& _platform, mesh_t& _mesh, settings_t& _settings,
   fileName   = oklFilePrefix + "massKernels" + suffix + oklFileSuffix;
   kernelName = "massAx" + suffix;
   
-  massAxKernel = platform.buildKernel(fileName, kernelName,
-					 kernelInfoDouble);
-  
-  floatMassAxKernel = platform.buildKernel(fileName, kernelName,
-					      kernelInfoFloat);
+  massAxKernel = platform.buildKernel(fileName, kernelName, kernelInfoDouble);
+  floatMassAxKernel = platform.buildKernel(fileName, kernelName, kernelInfoFloat);
 
   // Ax kernel (assume C0)
   kernelName = "massPartialAx" + suffix;
   
-  massPartialAxKernel = platform.buildKernel(fileName, kernelName,
-					 kernelInfoDouble);
-  
-  floatMassPartialAxKernel = platform.buildKernel(fileName, kernelName,
-					      kernelInfoFloat);
+  massPartialAxKernel = platform.buildKernel(fileName, kernelName, kernelInfoDouble);
+  floatMassPartialAxKernel = platform.buildKernel(fileName, kernelName, kernelInfoFloat);
 
   kernelName = "massScatter" + suffix;
-  massScatterKernel = platform.buildKernel(fileName, kernelName,
-					   kernelInfo);
+  massScatterKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
 
   kernelName = "massWeight" + suffix;
-  weightKernel = platform.buildKernel(fileName, kernelName,
-				      kernelInfo);
+  weightKernel = platform.buildKernel(fileName, kernelName, kernelInfo);
   
   
   /* Preconditioner Setup */

@@ -127,16 +127,9 @@ void ins_t::Setup(platform_t& _platform, mesh_t& _mesh,
     uSolver.Setup(platform, mesh, vSettings,
                   lambda, NBCTypes, uBCType);
 
-#if 0
-    vSolver.Setup(platform, mesh, vSettings,
-                  lambda, NBCTypes, vBCType);
-    if (mesh.dim == 3)
-      wSolver.Setup(platform, mesh, vSettings,
-                    lambda, NBCTypes, wBCType);
-#else
     vSolver = uSolver;
     wSolver = uSolver;
-#endif
+
     vTau = uSolver.tau;
 
     vDisc_c0 = settings.compareSetting("VELOCITY DISCRETIZATION", "CONTINUOUS") ? 1 : 0;

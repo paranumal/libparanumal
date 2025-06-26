@@ -65,13 +65,13 @@ SOFTWARE.
           if(e<Nelements && i<p_Nq && j<p_Nq){
             const dlong id = e*p_Np*p_NVfields + j*p_Nq+i;
 
-            const dfloat Un = Ue[id+0*p_Np];
-            const dfloat Vn = Ue[id+1*p_Np];
+            const dfloat Uen = Ue[id+0*p_Np];
+            const dfloat Ven = Ue[id+1*p_Np];
             const dfloat Udn = U[id+0*p_Np];
             const dfloat Vdn = U[id+1*p_Np];
 
-            s_F11[es][j][i] = Un;
-            s_F12[es][j][i] = Vn;
+            s_F11[es][j][i] = Uen;
+            s_F12[es][j][i] = Ven;
             s_F21[es][j][i] = Udn;
             s_F22[es][j][i] = Vdn;
           }
@@ -93,14 +93,14 @@ SOFTWARE.
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
-            r_Un  = 0.; r_Vn  = 0.;
+            r_Uen  = 0.; r_Ven  = 0.;
             r_Udn = 0.; r_Vdn = 0.;
 
             #pragma unroll p_Nq
             for (int n=0;n<p_Nq;n++) {
               const dfloat Ini = s_cubInterp[n][i];
-              r_Un  += Ini*s_F11[es][j][n];
-              r_Vn  += Ini*s_F12[es][j][n];
+              r_Uen += Ini*s_F11[es][j][n];
+              r_Ven += Ini*s_F12[es][j][n];
               r_Udn += Ini*s_F21[es][j][n];
               r_Vdn += Ini*s_F22[es][j][n];
             }
@@ -115,8 +115,8 @@ SOFTWARE.
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
           if (j<p_Nq) {
-            s_F11[es][j][i] = r_Un;
-            s_F12[es][j][i] = r_Vn;
+            s_F11[es][j][i] = r_Uen;
+            s_F12[es][j][i] = r_Ven;
             s_F21[es][j][i] = r_Udn;
             s_F22[es][j][i] = r_Vdn;
           }
@@ -129,14 +129,14 @@ SOFTWARE.
     for(int es=0;es<p_cubNblockV;++es;@inner(2)){
       for(int j=0;j<p_cubNq;++j;@inner(1)){
         for(int i=0;i<p_cubNq;++i;@inner(0)){
-          r_Un  = 0.; r_Vn  = 0.;
+          r_Uen = 0.; r_Ven  = 0.;
           r_Udn = 0.; r_Vdn = 0.;
 
           #pragma unroll p_Nq
           for (int n=0;n<p_Nq;n++) {
             const dfloat Inj = s_cubInterp[n][j];
-            r_Un  += Inj*s_F11[es][n][i];
-            r_Vn  += Inj*s_F12[es][n][i];
+	    r_Uen += Inj*s_F11[es][n][i];
+            r_Ven += Inj*s_F12[es][n][i];
             r_Udn += Inj*s_F21[es][n][i];
             r_Vdn += Inj*s_F22[es][n][i];
           }
