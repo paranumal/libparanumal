@@ -48,7 +48,8 @@ void cns_t::setupPhysics(){
   settings.getSetting("SPECIFIC GAS CONSTANT", R); 
   settings.getSetting("VISCOSITY", mu);              mu = EulerSolve ? 0.0:mu; 
 
-  const dfloat velRef = mesh.dim==2?std::sqrt(uref*uref+vref*vref):std::sqrt(uref*uref+vref*vref+wref*wref); 
+  const dfloat velRef = mesh.dim==2?std::sqrt(uref*uref+vref*vref):
+                                    std::sqrt(uref*uref+vref*vref+wref*wref); 
 
   // Compute Reynolds and Mach Numbers
   dfloat Lref;  

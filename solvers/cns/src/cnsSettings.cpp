@@ -135,6 +135,16 @@ cnsSettings_t::cnsSettings_t(comm_t& _comm):
   newSetting("MOMENT CENTER", "0.0, 0.0, 0.0,",
              "Center for the moments");
 
+  newSetting("REPORT PROBES", "FALSE", 
+             "Flag for reporting probes",
+             {"TRUE", "FALSE"});
+
+  newSetting("PROBE INPUT FILE", "probeInput");
+  newSetting("PROBE OUTPUT FILE", "probeOutput");
+  newSetting("PROBE INTERVAL", "0.1", "Time between probe output");
+
+
+
   newSetting("REFERENCE AREA", "1.0",
              "Reference area for reporting force coeeficients");
 
@@ -227,6 +237,12 @@ void cnsSettings_t::report() {
     reportSetting("OUTPUT INTERVAL");
     reportSetting("OUTPUT TO FILE");
     reportSetting("OUTPUT FILE NAME");
+
+    reportSetting("REPORT PROBES");
+    reportSetting("PROBE INPUT FILE");
+    reportSetting("PROBE OUTPUT FILE");
+    reportSetting("PROBE INTERVAL");
+
   }
 }
 

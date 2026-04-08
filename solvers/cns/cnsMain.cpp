@@ -42,8 +42,7 @@ int main(int argc, char **argv){
     cnsSettings_t cnsSettings(comm);
 
     //load settings from file
-    cnsSettings.parseFromFile(platformSettings, meshSettings,
-                              argv[1]);
+    cnsSettings.parseFromFile(platformSettings, meshSettings, argv[1]);
 
     // set up platform
     platform_t platform(platformSettings);

@@ -102,6 +102,13 @@ public:
   memory<int>  reportGroups;      
   deviceMemory<int>  o_reportGroups;  
 
+  // PROBES
+  int reportProbes, NprobeLocal, NprobeGlobal; 
+  memory<dfloat> probeX, probeR, probeI; 
+  memory<int> probeID, probeE, probeB, probeIDg; 
+  memory<int> probeRecvCount, probeRecvOffset; 
+
+
 
   // Physical coefficients
   memory<dfloat> pCoeff; 
@@ -243,6 +250,55 @@ public:
   void setFlowStates();
   void setBoundaryMaps();
   void setReport();
+  void setupProbe();
+  void readProbe(); 
+  void reportProbe(const dfloat T, const dfloat tstep, int frame); 
+  // void locateProbes(){
+  //   switch (mesh.elementType) {
+  //     case Mesh::TRIANGLES:
+  //       locateProbesTri2D();
+  //       break;
+  //     case Mesh::QUADRILATERALS:
+  //       locateProbesQuad2D();
+  //       break;
+  //     case Mesh::TETRAHEDRA:
+  //       locateProbesTet3D();
+  //       break;
+  //     case Mesh::HEXAHEDRA:
+  //       locateProbesHex3D();
+  //       break;
+  //   }
+  // } 
+
+
+  // void interpolateProbes(){
+  //   switch (mesh.elementType) {
+  //     case Mesh::TRIANGLES:
+  //       interpolateProbesTri2D();
+  //       break;
+  //     case Mesh::QUADRILATERALS:
+  //       interpolateProbesQuad2D();
+  //       break;
+  //     case Mesh::TETRAHEDRA:
+  //       interpolateProbesTet3D();
+  //       break;
+  //     case Mesh::HEXAHEDRA:
+  //       interpolateProbesHex3D();
+  //       break;
+  //   }
+  // } 
+
+  void probeInterp(const memory<dfloat> q, memory<dfloat> Iq); 
+
+  void interpolateProbesTri2D(); 
+  void interpolateProbesQuad2D(); 
+  void interpolateProbesHex3D(); 
+  void interpolateProbesTet3D(); 
+
+  void locateProbesTri2D(); 
+  void locateProbesQuad2D(); 
+  void locateProbesHex3D(); 
+  void locateProbesTet3D(); 
 
 dfloat ElementViscosityScaleTri2D(dlong e); 
 dfloat ElementViscosityScaleQuad2D(dlong e); 

@@ -22,21 +22,21 @@ data/cnsUniform3D.h
 #------------------Only for BOX mesh---------------------------#
 # if MESH FILE = BOX 
 [BOX NX]
-10
+8
 [BOX NY]
-10
+9
 
 [BOX NZ]
 10
 
 [BOX DIMX]
-10
+4
 
 [BOX DIMY]
-10
+4
 
 [BOX DIMZ]
-10
+4
 
 [BOX BOUNDARY FLAG]
 11
@@ -156,6 +156,16 @@ FALSE
 0:1,2,3,4,5,6,7,8,9,10,11,12,13,14,15;
 #1:1,2,3,4,13,14;2:5,6,7,8,9, 10, 11, 12,15;
 # Group zero is the whole body surfaces, 1 is the nose part and 2 is the remaning body parts
+
+
+[REPORT PROBES]
+TRUE
+
+[PROBE INPUT FILE]
+probeCoordinates3D.dat
+
+[PROBE OUTPUT FILE]
+probeOut3D
 
 [REFERENCE AREA]
 0.785398163397448

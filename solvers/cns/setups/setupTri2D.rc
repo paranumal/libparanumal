@@ -4,13 +4,12 @@ data/cnsUniform2D.h
 
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
-BOX
+#BOX
 #../../meshes/cnsScramjet2D.msh
 #../../meshes/cnsRamp2D.msh
 #../../meshes/cnsFFS2D.msh
-#../../meshes/cnsBump2D.msh
+../../meshes/cnsBump2D.msh
 #../../meshes/cnsHalfCylinder2D.msh
-
 #../../meshes/cnsSupersonicCylinder2D.msh
 #../../meshes/cnsFlatPlate2D.msh
 #../../meshes/cnsNACAFlexi2D.msh
@@ -118,8 +117,9 @@ SUTHERLAND
 #Geoemtric IDs -> BC IDs
 [GEOMETRIC-TO-PHYSICAL MAP]
 #12:1,2,3,4;20:5, 6, 7, 8, 9, 10, 11;
-#13:1,2,3,5;20:6,4;
-13:1,3,5,6,7,8;20:2,4;
+#bump
+13:1,2,3,5;20:6,4;
+#13:1,3,5,6,7,8;20:2,4;
 #13:1,2,4;20:3,5;
 #13:1;20:2,3,4;
 
@@ -131,7 +131,7 @@ SUTHERLAND
 0
 
 [FINAL TIME]
-10.0
+1.0
 #-------------------------------------------------------------#
 
 
@@ -163,6 +163,16 @@ TRUE
 # zero indexed groups
 [REPORT GROUPS]
 0:1,2,3,4;
+
+[REPORT PROBES]
+TRUE
+
+[PROBE INPUT FILE]
+probeCoordinates2D.dat
+
+[PROBE OUTPUT FILE]
+probeOut2D
+
 
 [REFERENCE AREA]
 1.0

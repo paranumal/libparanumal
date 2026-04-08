@@ -66,7 +66,21 @@ void bns_t::Report(dfloat time, int tstep){
     PlotFields(q, Vort, std::string(fname));
   }
 
-  o_q.copyTo(q); ComputeForces(time); 
+  o_q.copyTo(q); 
+
+
+
+  ComputeForces(time); 
+
+
+  if (settings.compareSetting("REPORT PROBES","TRUE")) {
+
+   
+
+
+
+
+  }
 
 
   // #endif

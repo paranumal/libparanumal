@@ -30,10 +30,15 @@ void cns_t::Report(dfloat time, int tstep){
 
   static int outFrame = 0;
   static int forceFrame = 0;     
+  static int probeFrame = 0;    
+
   if(settings.compareSetting("REPORT FORCES","TRUE")){
     writeForces(time, tstep, forceFrame); 
     forceFrame++; 
   }
+
+
+
 
   //compute q.M*q
   dlong Nentries = mesh.Nelements*mesh.Np*Nfields;
@@ -73,6 +78,16 @@ void cns_t::Report(dfloat time, int tstep){
     sprintf(fname, "%s_%04d_%04d.vtu", name.c_str(), mesh.rank, outFrame++);
     PlotFields(q, Vort, std::string(fname));
   }
+
+
+if(settings.compareSetting("REPORT PROBES","TRUE")){
+  reportProbe(time,tstep,probeFrame);
+  probeFrame++;
+}
+
+
+
+  
 }
 
 

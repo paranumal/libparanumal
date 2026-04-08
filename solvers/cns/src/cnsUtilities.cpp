@@ -238,8 +238,6 @@ void cns_t::setReport(){
 
   o_reportGroups = platform.malloc<int>(reportGroups);
 
-
-
   // Read Referenece State
   settings.getSetting("MOMENT CENTER", str);
   std::stringstream ssm(str);
@@ -268,5 +266,11 @@ void cns_t::setReport(){
   // Number of reference points per state
   props["defines/" "p_NrGrp"]    = (int) NreportGroups;
   props["defines/" "p_NrIDs"]    = (int) NreportIDs;
+
+
+  // Probe Setup
+  if(settings.compareSetting("REPORT PROBES","TRUE")){
+    setupProbe();
+  }
 
 }
