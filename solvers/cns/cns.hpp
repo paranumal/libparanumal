@@ -104,8 +104,9 @@ public:
 
   // PROBES
   int reportProbes, NprobeLocal, NprobeGlobal; 
-  memory<dfloat> probeX, probeR, probeI; 
-  memory<int> probeID, probeE, probeB, probeIDg; 
+  memory<dfloat> probeX, probeR, bestR, bestD, probeI; 
+  memory<int> probeIDg, probeIDl, probeIDa;  
+  memory<int> probeE, probeB, bestE; 
   memory<int> probeRecvCount, probeRecvOffset; 
 
 
