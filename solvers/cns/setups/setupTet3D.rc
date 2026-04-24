@@ -1,6 +1,7 @@
 #-------------------------------------------------------------#
 [DATA FILE]
-data/cnsUniform3D.h
+#data/cnsUniform3D.h
+data/cnsTGV3D.h
 
 #-------------------[MESH PROPERTIES]-----------------------#
 [MESH FILE]
