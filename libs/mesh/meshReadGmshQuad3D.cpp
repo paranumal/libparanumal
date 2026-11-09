@@ -24,77 +24,29 @@ SOFTWARE.
 
 */
 
+
 #include "mesh.hpp"
+#include "mesh/meshGmsh.hpp"
 
 namespace libp {
 
 /*
-   purpose: read gmsh quadrilateral mesh
+   purpose: read gmsh quadrilateral mesh (.msh format 2.2 or 4.1)
 */
 void mesh_t::ReadGmshQuad3D(const std::string fileName){
 
-  FILE *fp = fopen(fileName.c_str(), "r");
-  LIBP_ABORT("Cannot open file: " << fileName,
-             fp==NULL);
+  gmsh::reader_t gmshFile(fileName);
 
-  char buf[BUFSIZ];
-  do{
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-  }while(!strstr(buf, "$Nodes"));
+  /* node coordinates */
+  Nnodes = gmshFile.Nnodes;
+  memory<dfloat> VX = gmshFile.VX;
+  memory<dfloat> VY = gmshFile.VY;
+  memory<dfloat> VZ = gmshFile.VZ;
 
-  /* read number of nodes in mesh */
-  //read to end of line
-  LIBP_ABORT("Error reading mesh file: " << fileName,
-             !fgets(buf, BUFSIZ, fp));
-  sscanf(buf, hlongFormat, &(Nnodes));
-
-  /* allocate space for node coordinates */
-  memory<dfloat> VX(Nnodes);
-  memory<dfloat> VY(Nnodes);
-  memory<dfloat> VZ(Nnodes);
-
-  /* load nodes */
-  for(int n=0;n<Nnodes;++n){
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-    sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
-           VX.ptr()+n, VY.ptr()+n, VZ.ptr()+n);
-  }
-
-  /* look for section with Element node data */
-  do{
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-  }while(!strstr(buf, "$Elements"));
-
-  /* read number of nodes in mesh */
-  hlong gNelements;
-  //read to end of line
-  LIBP_ABORT("Error reading mesh file: " << fileName,
-             !fgets(buf, BUFSIZ, fp));
-  sscanf(buf, hlongFormat, &gNelements);
-
-  /* find # of quadrilaterals */
-  fpos_t fpos;
-  fgetpos(fp, &fpos);
-  hlong Nquadrilaterals = 0;
-  hlong gNboundaryFaces = 0;
-
-  for(hlong n=0;n<gNelements;++n){
-    int ElementType;
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-    sscanf(buf, "%*d%d", &ElementType);
-    if(ElementType==1) ++gNboundaryFaces;
-    if(ElementType==3) ++Nquadrilaterals;
-  }
-  // rewind to start of elements
-  fsetpos(fp, &fpos);
+  /* find # of quadrilaterals and boundary faces */
+  std::unordered_map<int, hlong> counts = gmshFile.CountElements();
+  hlong Nquadrilaterals = counts[gmsh::QUADRILATERAL];
+  hlong gNboundaryFaces = counts[gmsh::LINE];
 
   hlong chunk = (hlong) Nquadrilaterals/size;
   int remainder = (int) (Nquadrilaterals - chunk*size);
@@ -103,85 +55,56 @@ void mesh_t::ReadGmshQuad3D(const std::string fileName){
 
   /* where do these elements start ? */
   hlong start = rank*chunk + std::min(rank, remainder);
-  hlong end = start + NquadrilateralsLocal-1;
+  hlong end   = start + NquadrilateralsLocal-1;
 
   /* allocate space for Element node index data */
   EToV.malloc(NquadrilateralsLocal*Nverts);
   elementInfo.malloc(NquadrilateralsLocal);
 
-  /* scan through file looking for quadrilateral elements */
+  /* allocate space for boundary faces (tag + face vertices) */
+  boundaryInfo.malloc(gNboundaryFaces*(NfaceVertices+1));
+
+  /* scan through file looking for quadrilaterals and boundary faces */
   hlong cnt=0, bcnt=0;
   Nquadrilaterals = 0;
 
-  boundaryInfo.malloc(gNboundaryFaces*3);
-  for(hlong n=0;n<gNelements;++n){
-    int ElementType;
-    hlong v1, v2, v3, v4;
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-    sscanf(buf, "%*d%d", &ElementType);
-
-    if(ElementType==1){ // boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat,
-             boundaryInfo.ptr()+bcnt*3, &v1, &v2);
-      boundaryInfo[bcnt*3+1] = v1-1;
-      boundaryInfo[bcnt*3+2] = v2-1;
+  gmshFile.ForEachElement([&](const int gmshType,
+                              const hlong physicalTag,
+                              const hlong* v) {
+    if(gmshType==gmsh::LINE){ // boundary face
+      boundaryInfo[bcnt*(NfaceVertices+1)] = physicalTag;
+      for(int n=0;n<NfaceVertices;++n)
+        boundaryInfo[bcnt*(NfaceVertices+1)+n+1] = v[n];
       ++bcnt;
     }
-
-    if(ElementType==3){  // quadrilateral
+    if(gmshType==gmsh::QUADRILATERAL){ // quadrilateral
       if(start<=Nquadrilaterals && Nquadrilaterals<=end){
-        sscanf(buf, "%*d%*d%*d " hlongFormat " %*d" hlongFormat hlongFormat hlongFormat hlongFormat,
-               elementInfo.ptr()+cnt, &v1, &v2, &v3, &v4);
+        elementInfo[cnt] = physicalTag;
+        for(int n=0;n<Nverts;++n)
+          EToV[cnt*Nverts+n] = v[n];
 
-#if 0
-        // check orientation
-        dfloat xe1 = VX[v1-1], xe2 = VX[v2-1], xe4 = VX[v4-1];
-        dfloat ye1 = VY[v1-1], ye2 = VY[v2-1], ye4 = VY[v4-1];
-        dfloat J = 0.25*((xe2-xe1)*(ye4-ye1) - (xe4-xe1)*(ye2-ye1));
-        if(J<0){
-          int v4tmp = v4;
-          v4 = v2;
-          v2 = v4tmp;
-          printf("unwarping element\n");
-        }
-#endif
-
-        /* read vertex triplet for trianngle */
-        EToV[cnt*Nverts+0] = v1-1;
-        EToV[cnt*Nverts+1] = v2-1;
-        EToV[cnt*Nverts+2] = v3-1;
-        EToV[cnt*Nverts+3] = v4-1;
         ++cnt;
       }
       ++Nquadrilaterals;
     }
-  }
-  fclose(fp);
+  });
 
   /* record number of boundary faces found */
   NboundaryFaces = bcnt;
 
   /* record number of found quadrilaterals */
-  Nelements = NquadrilateralsLocal;
+  Nelements = (dlong) NquadrilateralsLocal;
 
   /* collect vertices for each element */
   EX.malloc(Nverts*Nelements);
   EY.malloc(Nverts*Nelements);
   EZ.malloc(Nverts*Nelements);
-  for(int e=0;e<Nelements;++e){
+  for(dlong e=0;e<Nelements;++e){
     for(int n=0;n<Nverts;++n){
-      EX[e*Nverts+n] = VX[EToV[e*Nverts+n]];
-      EY[e*Nverts+n] = VY[EToV[e*Nverts+n]];
-      EZ[e*Nverts+n] = VZ[EToV[e*Nverts+n]];
-#if 0
-      printf("e %d v %d %g %g %g\n",
-             e, n,
-             EX[e*Nverts+n],
-             EY[e*Nverts+n],
-             EZ[e*Nverts+n]);
-#endif
+      hlong vid = EToV[e*Nverts+n];
+      EX[e*Nverts+n] = VX[vid];
+      EY[e*Nverts+n] = VY[vid];
+      EZ[e*Nverts+n] = VZ[vid];
     }
   }
 }

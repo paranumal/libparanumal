@@ -113,6 +113,69 @@ def main():
                                               mesh=testDir+"/cubeHex.msh"),
                     referenceNorm=0.942816869518335)
 
+  # gmsh .msh format 4.1 versions of the meshes above must give the same results
+  failCount += test(name="testMeshTri_ReadMsh41",
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=3,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareTri41.msh"),
+                    referenceNorm=0.580787485719841)
+
+  failCount += test(name="testMeshQuad_ReadMsh41",
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=4,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareQuad41.msh"),
+                    referenceNorm=0.580787485654967)
+
+  failCount += test(name="testMeshTet_ReadMsh41",
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=6,data_file=gradientData3D,dim=3,
+                                              mesh=testDir+"/cubeTet41.msh"),
+                    referenceNorm=0.942816947760423)
+
+  failCount += test(name="testMeshHex_ReadMsh41",
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=12,data_file=gradientData3D,dim=3,
+                                              mesh=testDir+"/cubeHex41.msh"),
+                    referenceNorm=0.942816869518335)
+
+  failCount += test(name="testMeshTri_ReadMsh41_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=3,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareTri41.msh"),
+                    referenceNorm=0.580787485719841)
+
+  failCount += test(name="testMeshQuad_ReadMsh41_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=4,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareQuad41.msh"),
+                    referenceNorm=0.580787485654967)
+
+  failCount += test(name="testMeshTet_ReadMsh41_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=6,data_file=gradientData3D,dim=3,
+                                              mesh=testDir+"/cubeTet41.msh"),
+                    referenceNorm=0.942816947760423)
+
+  failCount += test(name="testMeshHex_ReadMsh41_MPI", ranks=2,
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=12,data_file=gradientData3D,dim=3,
+                                              mesh=testDir+"/cubeHex41.msh"),
+                    referenceNorm=0.942816869518335)
+
+  # format 2.2 file whose elements carry 4 tags (gmsh partition tags), see #75
+  failCount += test(name="testMeshTri_ReadMsh22Tags",
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=3,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareTri22Tags.msh"),
+                    referenceNorm=0.580787485719841)
+
+  # format 4.1 file with sparse, non-contiguous node tags
+  failCount += test(name="testMeshQuad_ReadMsh41SparseTags",
+                    cmd=gradientBin,
+                    settings=gradientSettings(element=4,data_file=gradientData2D,dim=2,
+                                              mesh=testDir+"/squareQuad41SparseTags.msh"),
+                    referenceNorm=0.580787485654967)
+
   return failCount
 
 if __name__ == "__main__":

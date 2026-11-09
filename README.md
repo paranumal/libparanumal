@@ -40,7 +40,7 @@ A. Supported elements:
   - Lagrange basis functions.
 
 B. Mesh wrangling:
-  - Gmsh format file loaders.
+  - Gmsh format file loaders (ASCII .msh format 2.2 and 4.1).
   - Load balanced inertial partitioning.
   - Load balanced multi-level spectral partitioning.
   - Cuthill-Mckee local ordering

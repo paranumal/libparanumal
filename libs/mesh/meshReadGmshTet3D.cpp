@@ -24,75 +24,29 @@ SOFTWARE.
 
 */
 
+
 #include "mesh.hpp"
+#include "mesh/meshGmsh.hpp"
 
 namespace libp {
 
 /*
-   purpose: read gmsh tetrahedra mesh
+   purpose: read gmsh tetrahedral mesh (.msh format 2.2 or 4.1)
 */
 void mesh_t::ReadGmshTet3D(const std::string fileName){
 
-  FILE *fp = fopen(fileName.c_str(), "r");
-  LIBP_ABORT("Cannot open file: " << fileName,
-             fp==NULL);
+  gmsh::reader_t gmshFile(fileName);
 
-  char buf[BUFSIZ];
-  do{
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-  }while(!strstr(buf, "$Nodes"));
+  /* node coordinates */
+  Nnodes = gmshFile.Nnodes;
+  memory<dfloat> VX = gmshFile.VX;
+  memory<dfloat> VY = gmshFile.VY;
+  memory<dfloat> VZ = gmshFile.VZ;
 
-  /* read number of nodes in mesh */
-  //read to end of line
-  LIBP_ABORT("Error reading mesh file: " << fileName,
-             !fgets(buf, BUFSIZ, fp));
-  sscanf(buf, hlongFormat, &(Nnodes));
-
-  /* allocate space for node coordinates */
-  memory<dfloat> VX(Nnodes);
-  memory<dfloat> VY(Nnodes);
-  memory<dfloat> VZ(Nnodes);
-
-  /* load nodes */
-  for(hlong n=0;n<Nnodes;++n){
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-    sscanf(buf, "%*d" dfloatFormat dfloatFormat dfloatFormat,
-           VX.ptr()+n, VY.ptr()+n, VZ.ptr()+n);
-  }
-
-  /* look for section with Element node data */
-  do{
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-  }while(!strstr(buf, "$Elements"));
-
-  /* read number of nodes in mesh */
-  hlong gNelements;
-  //read to end of line
-  LIBP_ABORT("Error reading mesh file: " << fileName,
-             !fgets(buf, BUFSIZ, fp));
-  sscanf(buf, hlongFormat, &gNelements);
-
-  /* find # of tets */
-  fpos_t fpos;
-  fgetpos(fp, &fpos);
-  hlong Ntets = 0, gNboundaryFaces = 0;
-  for(hlong n=0;n<gNelements;++n){
-    int ElementType;
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-    sscanf(buf, "%*d%d", &ElementType);
-    if(ElementType==4) ++Ntets; // tet code is 4
-    if(ElementType==2) ++gNboundaryFaces;
-  }
-  // rewind to start of elements
-  fsetpos(fp, &fpos);
+  /* find # of tets and boundary faces */
+  std::unordered_map<int, hlong> counts = gmshFile.CountElements();
+  hlong Ntets = counts[gmsh::TETRAHEDRON];
+  hlong gNboundaryFaces = counts[gmsh::TRIANGLE];
 
   hlong chunk = (hlong) Ntets/size;
   int remainder = (int) (Ntets - chunk*size);
@@ -101,50 +55,39 @@ void mesh_t::ReadGmshTet3D(const std::string fileName){
 
   /* where do these elements start ? */
   hlong start = rank*chunk + std::min(rank, remainder);
-  hlong end = start + NtetsLocal-1;
+  hlong end   = start + NtetsLocal-1;
 
   /* allocate space for Element node index data */
   EToV.malloc(NtetsLocal*Nverts);
   elementInfo.malloc(NtetsLocal);
 
-  /* scan through file looking for tetrahedra elements */
-  hlong cnt=0, bcnt = 0;
+  /* allocate space for boundary faces (tag + face vertices) */
+  boundaryInfo.malloc(gNboundaryFaces*(NfaceVertices+1));
+
+  /* scan through file looking for tets and boundary faces */
+  hlong cnt=0, bcnt=0;
   Ntets = 0;
 
-  boundaryInfo.malloc(gNboundaryFaces*4);
-  for(hlong n=0;n<gNelements;++n){
-    int ElementType;
-    hlong v1, v2, v3, v4;
-    //read to end of line
-    LIBP_ABORT("Error reading mesh file: " << fileName,
-               !fgets(buf, BUFSIZ, fp));
-    sscanf(buf, "%*d%d", &ElementType);
-    if(ElementType==2){ // boundary face
-      sscanf(buf, "%*d%*d %*d" hlongFormat "%*d" hlongFormat hlongFormat hlongFormat,
-             boundaryInfo.ptr()+bcnt*4, &v1, &v2, &v3);
-      boundaryInfo[bcnt*4+1] = v1-1;
-      boundaryInfo[bcnt*4+2] = v2-1;
-      boundaryInfo[bcnt*4+3] = v3-1;
+  gmshFile.ForEachElement([&](const int gmshType,
+                              const hlong physicalTag,
+                              const hlong* v) {
+    if(gmshType==gmsh::TRIANGLE){ // boundary face
+      boundaryInfo[bcnt*(NfaceVertices+1)] = physicalTag;
+      for(int n=0;n<NfaceVertices;++n)
+        boundaryInfo[bcnt*(NfaceVertices+1)+n+1] = v[n];
       ++bcnt;
     }
-
-    if(ElementType==4){  // tet code is 4
+    if(gmshType==gmsh::TETRAHEDRON){ // tetrahedron
       if(start<=Ntets && Ntets<=end){
-        sscanf(buf,
-               "%*d%*d%*d " hlongFormat " %*d"
-               hlongFormat hlongFormat hlongFormat hlongFormat,
-               elementInfo.ptr()+cnt,&v1, &v2, &v3, &v4);
-        /* read vertex triplet for trianngle */
-        EToV[cnt*Nverts+0] = v1-1;
-        EToV[cnt*Nverts+1] = v2-1;
-        EToV[cnt*Nverts+2] = v3-1;
-        EToV[cnt*Nverts+3] = v4-1;
+        elementInfo[cnt] = physicalTag;
+        for(int n=0;n<Nverts;++n)
+          EToV[cnt*Nverts+n] = v[n];
+
         ++cnt;
       }
       ++Ntets;
     }
-  }
-  fclose(fp);
+  });
 
   /* record number of boundary faces found */
   NboundaryFaces = bcnt;
